@@ -1,6 +1,12 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/", "destination": "/deneme.html" }
+  ],
   "rewrites": [
+    { "source": "/deneme", "destination": "/deneme.html" },
+    { "source": "/detayli-rapor", "destination": "/detayli-rapor.html" },
+    { "source": "/cvsair", "destination": "/cvsair.html" },
     {
       "source": "/api/(.*)",
       "destination": "https://YOUR_RENDER_SERVICE.onrender.com/api/$1"
