@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>Order GA Dashboard</title>
   <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 
@@ -301,6 +302,35 @@
     .currency-eur { color: #89b4fa; }
     .currency-tl { color: #fab387; }
   </style>
+<style>
+  /* Responsive enhancements */
+  .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table { min-width: 720px; }
+
+  @media (max-width: 1200px) {
+    .chart-section { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 1024px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .bottom-section { grid-template-columns: 1fr; }
+    #daily-line, #source-pie, #bar-cari { height: 320px; }
+    .chart-card, .metric-card { padding: 18px; }
+  }
+  @media (max-width: 768px) {
+    .header h1 { font-size: 24px; }
+    .date-range { font-size: 13px; }
+    .main-content { padding: 20px; }
+    .metrics-grid { grid-template-columns: 1fr; gap: 16px; }
+    .chart-card { padding: 16px; }
+    .chart-title { font-size: 16px; margin-bottom: 12px; }
+    #daily-line, #source-pie, #bar-cari { height: 280px; }
+  }
+  @media (max-width: 480px) {
+    .header h1 { font-size: 20px; }
+    .hamburger-btn { width: 44px; height: 44px; }
+    .metric-value { font-size: 24px; }
+  }
+</style>
 </head>
 <body>
   <button class="hamburger-btn" id="hamburgerBtn" aria-controls="siteSidebar" aria-expanded="false" aria-label="Menüyü aç/kapat">
@@ -943,5 +973,45 @@
         });
       });
     </script>
-  </body>
+<script>
+  (function initMenuToggle(){
+    const btn = document.getElementById('hamburgerBtn');
+    const sidebar = document.getElementById('siteSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const openMenu = ()=> {
+      sidebar.classList.add('open');
+      document.body.classList.add('menu-open');
+      btn?.setAttribute('aria-expanded','true');
+    };
+    const closeMenu = ()=> {
+      sidebar.classList.remove('open');
+      document.body.classList.remove('menu-open');
+      btn?.setAttribute('aria-expanded','false');
+    };
+    btn?.addEventListener('click', ()=>{
+      const isOpen = sidebar.classList.contains('open');
+      isOpen ? closeMenu() : openMenu();
+    });
+    overlay?.addEventListener('click', closeMenu);
+    window.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape') closeMenu();
+    });
+    // Close the menu when a sidebar item is clicked
+    sidebar.querySelectorAll('a.sidebar-item').forEach(a=>{
+      a.addEventListener('click', closeMenu);
+    });
+  })();
+
+  function resizeCharts() {
+    ['daily-line','source-pie','bar-cari'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el && window.Plotly && typeof (window.Plotly.Plots && window.Plotly.Plots.resize) === 'function') {
+        window.Plotly.Plots.resize(el);
+      }
+    });
+  }
+  window.addEventListener('resize', resizeCharts);
+  window.addEventListener('orientationchange', resizeCharts);
+</script>
+</body>
 </html>
