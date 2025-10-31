@@ -942,64 +942,33 @@
         }
       });
 
-      // Hamburger menu functionality
-      document.addEventListener('DOMContentLoaded', function() {
-        const hamburgerBtn = document.getElementById('hamburgerBtn');
-        const sidebar = document.getElementById('siteSidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-
-        function toggleMenu() {
-          const isOpen = sidebar.classList.contains('open');
-          
-          if (isOpen) {
-            sidebar.classList.remove('open');
-            document.body.classList.remove('menu-open');
-            hamburgerBtn.setAttribute('aria-expanded', 'false');
-          } else {
-            sidebar.classList.add('open');
-            document.body.classList.add('menu-open');
-            hamburgerBtn.setAttribute('aria-expanded', 'true');
-          }
-        }
-
-        hamburgerBtn.addEventListener('click', toggleMenu);
-        overlay.addEventListener('click', toggleMenu);
-
-        // Close menu with Escape key
-        document.addEventListener('keydown', function(e) {
-          if (e.key === 'Escape' && sidebar.classList.contains('open')) {
-            toggleMenu();
-          }
-        });
-      });
+      // Hamburger menu functionality is handled by the unified initMenuToggle() below
     </script>
 <script>
-  (function initMenuToggle(){
+(function initMenuToggle(){
     const btn = document.getElementById('hamburgerBtn');
     const sidebar = document.getElementById('siteSidebar');
     const overlay = document.getElementById('sidebarOverlay');
+    if (!btn || !sidebar) return;
+
     const openMenu = ()=> {
       sidebar.classList.add('open');
       document.body.classList.add('menu-open');
-      btn?.setAttribute('aria-expanded','true');
+      btn.setAttribute('aria-expanded','true');
     };
     const closeMenu = ()=> {
       sidebar.classList.remove('open');
       document.body.classList.remove('menu-open');
-      btn?.setAttribute('aria-expanded','false');
+      btn.setAttribute('aria-expanded','false');
     };
-    btn?.addEventListener('click', ()=>{
-      const isOpen = sidebar.classList.contains('open');
-      isOpen ? closeMenu() : openMenu();
-    });
+    const toggle = (e)=>{ e?.preventDefault?.(); const isOpen = sidebar.classList.contains('open'); isOpen ? closeMenu() : openMenu(); };
+
+    btn.addEventListener('click', toggle);
+    btn.addEventListener('touchstart', toggle, { passive: true });
     overlay?.addEventListener('click', closeMenu);
-    window.addEventListener('keydown', (e)=>{
-      if (e.key === 'Escape') closeMenu();
-    });
+    window.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeMenu(); });
     // Close the menu when a sidebar item is clicked
-    sidebar.querySelectorAll('a.sidebar-item').forEach(a=>{
-      a.addEventListener('click', closeMenu);
-    });
+    (sidebar.querySelectorAll?.('a.sidebar-item') || []).forEach(a=>{ a.addEventListener('click', closeMenu); });
   })();
 
   function resizeCharts() {
