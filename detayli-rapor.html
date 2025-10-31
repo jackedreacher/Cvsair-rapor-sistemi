@@ -333,6 +333,20 @@
       .table-container { max-height: 60vh; }
       .sidebar.open ~ .sidebar-overlay { opacity: 1; pointer-events: auto; }
       body.menu-open { overflow: hidden; }
+
+      /* Butonlar mobilde eşit genişlik ve yükseklikte olsun */
+      .actions-row { width: 100%; }
+      .actions-row .btn { 
+        flex: 1; 
+        min-width: 0; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        text-align: center; 
+        padding: 12px 16px; 
+        font-size: 14px; 
+        min-height: 56px;
+      }
     }
 
     @media (max-width: 480px) {
@@ -419,7 +433,7 @@
           </select>
         </div>
       </div>
-      <div style="display: flex; gap: 10px; align-items: center;">
+      <div class="actions-row" style="display: flex; gap: 10px; align-items: center;">
         <button class="btn" onclick="applyFilters()">Filtreleri Uygula</button>
         <button class="btn btn-secondary" onclick="clearFilters()">Temizle</button>
         <button class="btn btn-secondary" onclick="exportData()">Excel'e Aktar</button>
