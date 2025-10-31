@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>Detaylı Rapor - CVSAir</title>
   <!-- Plotly core script with defer to avoid blocking, and integrity fallback handled below -->
   <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" defer></script>
@@ -141,6 +142,7 @@
       overflow-x: auto;
       max-height: 600px;
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .data-table table {
       width: 100%;
@@ -299,18 +301,35 @@
     /* Masaüstünde geçiş animasyonu için */
     .sidebar { will-change: transform; transition: transform .3s ease; }
 
+    /* Tablet optimizations */
+    @media (max-width: 1024px) {
+      .controls-section { padding: 18px; }
+      .stat-card { padding: 16px; }
+      .stat-value { font-size: 20px; }
+      .data-table th, .data-table td { padding: 10px 12px; }
+    }
+
     @media (max-width: 768px) {
       .sidebar { transform: translateX(-100%); padding-top: 96px; }
       .sidebar.open { transform: translateX(0); }
       /* Mobilde hamburger görünür ve konum kontrol edilir */
       .hamburger-btn { display: flex; left: 16px; }
-      /* Menü açıldığında hamburger sidebar'ın sağında konumlanır ve çakışmayı önler */
-      body.menu-open .hamburger-btn { left: calc(80px + 16px); }
+      /* Menü açıkken hamburger menünün üzerinde kalsın */
+      body.menu-open .hamburger-btn { left: 16px; }
       .main-content { margin-left: 0; }
       /* Başlık yazısı hamburger ile çakışmasın diye soldan boşluk bırak */
       .header { padding-left: calc(44px + 24px); }
+      .table-container { max-height: 60vh; }
       .sidebar.open ~ .sidebar-overlay { opacity: 1; pointer-events: auto; }
       body.menu-open { overflow: hidden; }
+    }
+
+    @media (max-width: 480px) {
+      .header h1 { font-size: 22px; }
+      .btn { padding: 8px 14px; font-size: 14px; }
+      .control-input { font-size: 13px; padding: 7px 10px; }
+      .data-table th { font-size: 11px; }
+      .data-table td { font-size: 13px; }
     }
   </style>
 </head>
@@ -1348,6 +1367,7 @@
       };
 
       btn.addEventListener('click', toggleMenu);
+      btn.addEventListener('touchstart', toggleMenu, { passive: true });
       overlay.addEventListener('click', closeMenu);
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeMenu();
