@@ -1366,9 +1366,20 @@
         }
       };
 
-      btn.addEventListener('click', toggleMenu);
-      btn.addEventListener('touchstart', toggleMenu, { passive: true });
-      overlay.addEventListener('click', closeMenu);
+      // Deduplicate touch/click: ignore synthetic click after touch
+      function bindTap(el, handler) {
+        if (!el) return;
+        if ('onpointerup' in window) {
+          el.addEventListener('pointerup', handler);
+        } else {
+          let lastTouch = 0;
+          el.addEventListener('touchstart', (e)=>{ lastTouch = Date.now(); handler(e); }, { passive: true });
+          el.addEventListener('click', (e)=>{ if (Date.now() - lastTouch < 500) return; handler(e); });
+        }
+      }
+
+      bindTap(btn, toggleMenu);
+      bindTap(overlay, closeMenu);
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeMenu();
       });

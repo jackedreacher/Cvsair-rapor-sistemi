@@ -963,9 +963,20 @@
     };
     const toggle = (e)=>{ e?.preventDefault?.(); const isOpen = sidebar.classList.contains('open'); isOpen ? closeMenu() : openMenu(); };
 
-    btn.addEventListener('click', toggle);
-    btn.addEventListener('touchstart', toggle, { passive: true });
-    overlay?.addEventListener('click', closeMenu);
+    // Deduplicate touch/click: ignore synthetic click fired after touch
+    function bindTap(el, handler) {
+      if (!el) return;
+      if ('onpointerup' in window) {
+        el.addEventListener('pointerup', handler);
+      } else {
+        let lastTouch = 0;
+        el.addEventListener('touchstart', (e)=>{ lastTouch = Date.now(); handler(e); }, { passive: true });
+        el.addEventListener('click', (e)=>{ if (Date.now() - lastTouch < 500) return; handler(e); });
+      }
+    }
+
+    bindTap(btn, toggle);
+    bindTap(overlay, closeMenu);
     window.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeMenu(); });
     // Close the menu when a sidebar item is clicked
     (sidebar.querySelectorAll?.('a.sidebar-item') || []).forEach(a=>{ a.addEventListener('click', closeMenu); });
