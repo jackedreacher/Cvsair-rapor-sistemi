@@ -9,7 +9,7 @@
     { "source": "/cvsair", "destination": "/cvsair.html" },
     {
       "source": "/api/(.*)",
-      "destination": "https://YOUR_RENDER_SERVICE.onrender.com/api/$1"
+      "destination": "https://cvsair-rapor-sistemi.onrender.com/api/$1"
     }
   ]
 }
