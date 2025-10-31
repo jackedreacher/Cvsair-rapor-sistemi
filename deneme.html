@@ -129,7 +129,7 @@
       font-weight: 600;
       color: #ffffff;
     }
-    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
     .logo-topright {
       height: 28px;
       width: auto;
@@ -331,6 +331,10 @@
     .header h1 { font-size: 24px; }
     .date-range { font-size: 13px; }
     .main-content { padding: 20px; }
+    .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .header-right { width: 100%; justify-content: space-between; }
+    .date-range { white-space: nowrap; padding: 8px 12px; }
+    .logo-topright { height: 24px; padding: 3px 5px; }
     .metrics-grid { grid-template-columns: 1fr; gap: 16px; }
     .chart-card { padding: 16px; }
     .chart-title { font-size: 16px; margin-bottom: 12px; }

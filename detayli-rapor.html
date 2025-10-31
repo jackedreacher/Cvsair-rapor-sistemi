@@ -60,7 +60,8 @@
       color: #ffffff;
       line-height: 1.1;
     }
-    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; }
+    .date-range { background: #252836; padding: 8px 16px; border-radius: 8px; font-size: 14px; color: #9ca3af; }
     .logo-topright {
       height: 28px;
       width: auto;
@@ -328,8 +329,11 @@
       /* Menü açıkken hamburger menünün üzerinde kalsın */
       body.menu-open .hamburger-btn { left: 16px; }
       .main-content { margin-left: 0; }
-      /* Başlık yazısı hamburger ile çakışmasın diye soldan boşluk bırak */
-      .header { padding-left: calc(44px + 24px); }
+      /* Başlık yazısı hamburger ile çakışmasın, mobilde başlık üstte; tarih+logo altta */
+      .header { padding-left: calc(44px + 24px); flex-direction: column; align-items: flex-start; gap: 12px; }
+      .header-right { width: 100%; justify-content: space-between; }
+      .date-range { white-space: nowrap; padding: 8px 12px; font-size: 13px; }
+      .logo-topright { height: 24px; padding: 3px 5px; }
       .table-container { max-height: 60vh; }
       .sidebar.open ~ .sidebar-overlay { opacity: 1; pointer-events: auto; }
       body.menu-open { overflow: hidden; }
