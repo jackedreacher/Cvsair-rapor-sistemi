@@ -362,7 +362,7 @@
   <div class="main-content">
     <div class="header">
       <h1>Detaylı Rapor</h1>
-      <div class="date-range">13 Ağu 2025 - 6 Ekim 2025</div>
+      <div class="date-range" id="dateRange" aria-live="polite"></div>
     </div>
 
    
@@ -992,6 +992,20 @@
   }
   window.addEventListener('resize', resizeCharts);
   window.addEventListener('orientationchange', resizeCharts);
+</script>
+<script>
+  // Live current time in header (Turkish locale, 24-hour)
+  function startHeaderClock() {
+    const el = document.getElementById('dateRange');
+    if (!el) return;
+    const fmt = () => new Date().toLocaleString('tr-TR', {
+      year: 'numeric', month: 'short', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    }).replace(',', '');
+    el.textContent = `Şu an: ${fmt()}`;
+    setInterval(() => { el.textContent = `Şu an: ${fmt()}`; }, 1000);
+  }
+  document.addEventListener('DOMContentLoaded', startHeaderClock);
 </script>
 </body>
 </html>
