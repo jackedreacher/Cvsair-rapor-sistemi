@@ -60,6 +60,17 @@
       color: #ffffff;
       line-height: 1.1;
     }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .logo-topright {
+      height: 28px;
+      width: auto;
+      object-fit: contain;
+      border-radius: 6px;
+      background: #2a2e3f;
+      padding: 4px 6px;
+      border: 1px solid #374151;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
     .controls-section {
       background: #252836;
       padding: 24px;
@@ -363,7 +374,10 @@
   <div class="main-content">
     <div class="header">
       <h1>Detaylı Sipariş Raporu</h1>
-      <div class="date-range" id="dateRange"></div>
+      <div class="header-right">
+        <div class="date-range" id="dateRange"></div>
+        <img src="LOGO.png" alt="CVS Air Logo" class="logo-topright" />
+      </div>
     </div>
 
     <!-- Kontrol Paneli -->
