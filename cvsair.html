@@ -1,0 +1,1502 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVSAir Ventilation Systems: Comprehensive Research Report</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Vanta.js for animated background -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.119.1/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.net.min.js"></script>
+    
+    <!-- External CSS and JavaScript files -->
+    <link rel="stylesheet" href="styles.css">
+    <script src="translations.js"></script>
+    <script src="edit-controls.js"></script>
+
+    <style>
+        :root {
+            --color-primary: #1e293b;
+            --color-secondary: #475569;
+            --color-accent: #0ea5e9;
+            --color-background: #f8fafc;
+            --color-surface: #ffffff;
+            --color-text: #334155;
+            --color-text-light: #64748b;
+            --color-border: #e2e8f0;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-background);
+            color: var(--color-text);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .hero-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-overlay {
+            background: rgba(15, 23, 42, 0.8);
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        
+        .toc-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--color-surface);
+            border-right: 1px solid var(--color-border);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem 0;
+        }
+        
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+        
+        .toc-link {
+            display: block;
+            padding: 0.5rem 1.5rem;
+            color: var(--color-text-light);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .toc-link:hover {
+            color: var(--color-accent);
+            border-left-color: var(--color-accent);
+            background-color: #f1f5f9;
+        }
+        
+        .toc-link.active {
+            color: var(--color-accent);
+            border-left-color: var(--color-accent);
+            background-color: #f1f5f9;
+            font-weight: 500;
+        }
+        
+        .section-header {
+            border-bottom: 3px solid var(--color-accent);
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .citation-link {
+            color: var(--color-accent);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        .citation-link:hover {
+            color: #0284c7;
+        }
+        
+        .bento-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .bento-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .bento-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .product-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .product-card:hover {
+            border-color: var(--color-accent);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+        }
+        
+        .vanta-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        @media (max-width: 1024px) {
+            .toc-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .toc-sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .bento-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+  </head>
+
+  <body>
+    <!-- Table of Contents Sidebar -->
+    <nav class="toc-sidebar" id="tocSidebar">
+      <div class="px-6 mb-6">
+        <h3 class="font-serif text-lg font-semibold text-slate-800" data-i18n="contents">Contents</h3>
+      </div>
+
+      <div class="space-y-1">
+        <a href="#executive-summary" class="toc-link">Executive Summary</a>
+        <a href="#company-profile" class="toc-link">1. Company Profile</a>
+        <a href="#business-offerings" class="toc-link text-sm pl-8">1.1 Core Business & Offerings</a>
+        <a href="#usps" class="toc-link text-sm pl-8">1.2 Unique Selling Points</a>
+        <a href="#target-market" class="toc-link text-sm pl-8">1.3 Target Market</a>
+        <a href="#industry-context" class="toc-link">2. Industry Context</a>
+        <a href="#hvac-vs-hvacr" class="toc-link text-sm pl-8">2.1 HVAC vs HVACR</a>
+        <a href="#product-roles" class="toc-link text-sm pl-8">2.2 Product Roles</a>
+        <a href="#competitive-landscape" class="toc-link">3. Competitive Landscape</a>
+        <a href="#local-competitors" class="toc-link text-sm pl-8">3.1 Local Competitors</a>
+        <a href="#global-competitors" class="toc-link text-sm pl-8">3.2 Global Competitors</a>
+        <a href="#comparative-analysis" class="toc-link text-sm pl-8">3.3 Comparative Analysis</a>
+        <a href="#website-crm-analysis" class="toc-link">4. Website & CRM Analysis</a>
+        <a href="#website-functionality" class="toc-link text-sm pl-8">4.1 Website Functionality</a>
+        <a href="#improvement-areas" class="toc-link text-sm pl-8">4.2 Improvement Areas</a>
+        <a href="#crm-considerations" class="toc-link text-sm pl-8">4.3 CRM Considerations</a>
+      </div>
+    </nav>
+
+    <!-- Mobile Toggle Button -->
+    <button id="tocToggle" class="fixed top-4 left-4 z-50 p-2 bg-slate-800 text-white rounded-lg shadow-lg lg:hidden">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Language Switcher -->
+    <div class="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/80 backdrop-blur px-2 py-1 rounded-full shadow border border-slate-200">
+      <button id="langEnBtn" class="px-3 py-1 text-sm rounded-full border border-transparent hover:border-slate-300 transition" aria-label="Switch to English" title="English">EN</button>
+      <button id="langTrBtn" class="px-3 py-1 text-sm rounded-full border border-transparent hover:border-slate-300 transition" aria-label="Türkçe'ye geç" title="Türkçe">TR</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Hero Section -->
+      <section class="hero-bg min-h-screen flex items-center justify-center relative" id="hero">
+        <div id="vanta-bg" class="vanta-canvas"></div>
+        <div class="hero-overlay"></div>
+
+        <div class="hero-content container mx-auto px-8 text-center text-white">
+          <h1 class="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-6 leading-tight" data-i18n="hero-title">
+            <em>CVSAir Ventilation Systems</em>
+          </h1>
+          <p class="text-lg sm:text-xl md:text-2xl mb-8 text-slate-300 max-w-4xl mx-auto px-4" data-i18n="hero-subtitle">
+            A comprehensive research report analyzing Turkey's leading ventilation manufacturer
+          </p>
+
+          <!-- Bento Grid Layout -->
+          <div class="bento-grid max-w-6xl mx-auto">
+            <div class="bento-item col-span-2">
+              <div class="flex items-center mb-3">
+                <i class="fas fa-industry text-2xl mr-3 text-blue-400"></i>
+                <h3 class="font-serif text-xl font-semibold" data-i18n="market-position">Market Position</h3>
+              </div>
+              <p class="text-sm text-slate-200" data-i18n="market-position-desc">Leading Turkish manufacturer with AMCA membership and presence in 40+ countries</p>
+            </div>
+
+            <div class="bento-item">
+              <div class="flex items-center mb-3">
+                <i class="fas fa-certificate text-2xl mr-3 text-green-400"></i>
+                <h3 class="font-serif text-xl font-semibold" data-i18n="certifications">Certifications</h3>
+              </div>
+              <p class="text-sm text-slate-200" data-i18n="certifications-desc">CE, ISO 9001, ISO 14001, OHSAS 18001, Atex, SES, EAC</p>
+            </div>
+
+            <div class="bento-item">
+              <div class="flex items-center mb-3">
+                <i class="fas fa-wind text-2xl mr-3 text-cyan-400"></i>
+                <h3 class="font-serif text-xl font-semibold" data-i18n="product-range">Product Range</h3>
+              </div>
+              <p class="text-sm text-slate-200" data-i18n="product-range-desc">Jet fans, smoke extraction, industrial fans, heat recovery units</p>
+            </div>
+
+            <div class="bento-item col-span-2">
+              <div class="flex items-center mb-3">
+                <i class="fas fa-building text-2xl mr-3 text-amber-400"></i>
+                <h3 class="font-serif text-xl font-semibold" data-i18n="key-projects">Key Projects</h3>
+              </div>
+              <p class="text-sm text-slate-200">Istanbul Airport, Şenol Güneş Sports Complex, Expo Antalya</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Executive Summary -->
+      <section id="executive-summary" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="font-serif text-4xl font-bold mb-8 section-header" data-i18n="executive-summary">Executive Summary</h2>
+
+          <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <div>
+              <h3 class="font-serif text-2xl font-semibold mb-4 text-slate-800" data-i18n="company-overview">Company Overview</h3>
+              <p class="text-lg mb-4">CVSAir Ventilation Systems stands as Turkey's premier ventilation manufacturer, distinguished by its unique AMCA membership and comprehensive international certifications. Established in 2008, the company has rapidly evolved into a significant global player, exporting to over 40 countries worldwide.</p>
+
+              <div class="bg-slate-50 p-6 rounded-lg">
+                <h4 class="font-semibold text-lg mb-3 text-slate-700" data-i18n="key-strengths">Key Strengths</h4>
+                <ul class="space-y-2 text-slate-600">
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                    <span>Only AMCA member in Turkey</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                    <span>Presence in 40+ international markets</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                    <span>Advanced engineering services including CFD analysis</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                    <span>Comprehensive certification portfolio</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="font-serif text-2xl font-semibold mb-4 text-slate-800" data-i18n="market-position-section">Market Position</h3>
+              <p class="text-lg mb-4">CVSAir operates in the competitive HVAC/HVACR sector, serving B2B clients with high-performance ventilation solutions. The company's focus on energy efficiency, certified quality, and technical expertise positions it strongly against both local and global competitors.</p>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg text-center">
+                  <div class="text-3xl font-bold text-blue-600 mb-2">40+</div>
+                  <div class="text-sm text-blue-700">Countries Served</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg text-center">
+                  <div class="text-3xl font-bold text-green-600 mb-2">15+</div>
+                  <div class="text-sm text-green-700">Years Experience</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-8 rounded-lg">
+            <h3 class="font-serif text-2xl font-semibold mb-4" data-i18n="strategic-recommendations">Strategic Recommendations</h3>
+            <p class="text-lg mb-4">To strengthen its market position, CVSAir should focus on enhancing its digital presence through improved website functionality, advanced analytics, and CRM integration. Key areas for development include:</p>
+            <ul class="grid md:grid-cols-2 gap-4">
+              <li class="flex items-start">
+                <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                <span>Enhanced reporting and user analytics</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                <span>Improved B2B client management</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                <span>Streamlined user experience</span>
+              </li>
+              <li class="flex items-start">
+                <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                <span>Integrated sales processes</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Company Profile Section -->
+      <section id="company-profile" class="py-16 bg-slate-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="font-serif text-4xl font-bold mb-12 section-header">1. Company Profile</h2>
+
+          <!-- Core Business and Offerings -->
+          <div id="business-offerings" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800">1.1 Core Business and Offerings</h3>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+              <div class="product-card">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-factory text-2xl text-blue-600 mr-3"></i>
+                  <h4 class="font-semibold text-lg">Manufacturing Excellence</h4>
+                </div>
+                <p class="text-slate-600">Established in 2008, CVSAir has built its reputation on quality production, reliability, and customer satisfaction across 40+ countries.</p>
+              </div>
+
+              <div class="product-card">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-wind text-2xl text-green-600 mr-3"></i>
+                  <h4 class="font-semibold text-lg">Comprehensive Portfolio</h4>
+                </div>
+                <p class="text-slate-600">Specialized in car parking ventilation and jet fan systems, with extensive range covering smoke exhaust, tunnel fans, and industrial applications.</p>
+              </div>
+
+              <div class="product-card">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-tools text-2xl text-purple-600 mr-3"></i>
+                  <h4 class="font-semibold text-lg">Advanced Services</h4>
+                </div>
+                <p class="text-slate-600">Engineering expertise including fan selection assistance and Computational Fluid Dynamics (CFD) analysis for optimal project outcomes.</p>
+              </div>
+            </div>
+
+            <!-- Product Portfolio Details -->
+            <div class="bg-white rounded-lg p-8 mb-12 shadow-sm">
+              <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800">Technical Specifications & Standards</h4>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h5 class="font-semibold text-lg mb-4 text-slate-700" data-i18n="axial-jet-fan-standards">Axial Jet Fan Standards</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-center">
+                      <i class="fas fa-certificate text-yellow-500 mr-3"></i>
+                      <span class="text-slate-600">Manufactured according to <strong>EN 12101-3</strong> standard</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-fire text-red-500 mr-3"></i>
+                      <span class="text-slate-600">Available in <strong>F300 (300°C for 120 minutes)</strong> and <strong>F400 (400°C for 120 minutes)</strong> strength classes</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-shield-alt text-blue-500 mr-3"></i>
+                      <span class="text-slate-600">Protective wire guard to prevent particle entry</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 class="font-semibold text-lg mb-4 text-slate-700" data-i18n="compliance-safety">Compliance & Safety</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-center">
+                      <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                      <span class="text-slate-600"><strong>EN 60335-2-80</strong> for low voltage equipment</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-bolt text-yellow-500 mr-3"></i>
+                      <span class="text-slate-600"><strong>2004/108/EC</strong> for electromagnetic compatibility</span>
+                    </div>
+                    <div class="flex items-center">
+                      <i class="fas fa-volume-down text-purple-500 mr-3"></i>
+                      <span class="text-slate-600">Aerofoil blade design for low-noise operation</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p class="text-sm text-slate-500 mt-6">
+                Source: <a href="https://cvsair.bg/axial-jet-fan-2/" class="citation-link" target="_blank">CVSAir Technical Specifications</a>
+              </p>
+            </div>
+          </div>
+
+          <!-- Unique Selling Points -->
+          <div id="usps" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="unique-selling-points">1.2 Unique Selling Points</h3>
+
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white rounded-lg p-6 shadow-sm border-t-4 border-blue-500">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-award text-3xl text-blue-500 mr-4"></i>
+                  <h4 class="font-serif text-xl font-semibold" data-i18n="amca-membership">AMCA Membership</h4>
+                </div>
+                <p class="text-slate-600 mb-4" data-i18n="amca-desc">The <strong>only AMCA member in Turkey</strong>, demonstrating commitment to highest standards of quality and performance in air movement and control industry.</p>
+                <p class="text-sm text-slate-500">
+                  <a href="http://cvsair.bg/" class="citation-link" target="_blank">Source: CVSAir Corporate</a>
+                </p>
+              </div>
+
+              <div class="bg-white rounded-lg p-6 shadow-sm border-t-4 border-green-500">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-certificate text-3xl text-green-500 mr-4"></i>
+                  <h4 class="font-serif text-xl font-semibold" data-i18n="global-certifications">Global Certifications</h4>
+                </div>
+                <p class="text-slate-600 mb-4" data-i18n="global-cert-desc">Extensive certifications including <strong>CE, ISO 9001, ISO 14001, OHSAS 18001, Atex, SES, and EAC</strong> for international market access.</p>
+                <p class="text-sm text-slate-500">
+                  <a href="http://cvsair.bg/" class="citation-link" target="_blank">Source: CVSAir Quality Standards</a>
+                </p>
+              </div>
+
+              <div class="bg-white rounded-lg p-6 shadow-sm border-t-4 border-purple-500">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-cogs text-3xl text-purple-500 mr-4"></i>
+                  <h4 class="font-serif text-xl font-semibold" data-i18n="engineering-excellence">Engineering Excellence</h4>
+                </div>
+                <p class="text-slate-600 mb-4" data-i18n="engineering-excellence-desc">Advanced services including <strong>fan selection assistance and CFD analysis</strong> for comprehensive project support and optimization.</p>
+                <p class="text-sm text-slate-500">
+                  <a href="http://cvsair.bg/" class="citation-link" target="_blank">Source: CVSAir Services</a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Target Market -->
+          <div id="target-market" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="target-market-value-prop">1.3 Target Market and Value Proposition</h3>
+
+            <div class="grid md:grid-cols-2 gap-8">
+              <div class="bg-white rounded-lg p-8 shadow-sm">
+                <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800" data-i18n="primary-customer-base">Primary Customer Base (B2B)</h4>
+                <div class="space-y-4">
+                  <div class="flex items-start">
+                    <i class="fas fa-drafting-compass text-blue-500 mt-1 mr-4"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="engineering-firms-architects">Engineering Firms & Architects</h5>
+                      <p class="text-slate-600">Design and implementation of ventilation systems in commercial and industrial facilities</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-hard-hat text-yellow-500 mt-1 mr-4"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="project-managers-contractors">Project Managers & Contractors</h5>
+                      <p class="text-slate-600">Large-scale infrastructure and construction projects requiring certified solutions</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-building text-green-500 mt-1 mr-4"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="industrial-commercial-sectors">Industrial & Commercial Sectors</h5>
+                      <p class="text-slate-600">Facilities requiring specialized ventilation and smoke control systems</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg p-8 shadow-sm">
+                <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800" data-i18n="key-projects-case-studies">Key Projects & Case Studies</h4>
+                <div class="space-y-4">
+                  <div class="border-l-4 border-blue-500 pl-4">
+                    <h5 class="font-semibold text-slate-700" data-i18n="istanbul-airport">Istanbul Airport</h5>
+                    <p class="text-slate-600">Massive infrastructure undertaking requiring state-of-the-art ventilation systems</p>
+                  </div>
+
+                  <div class="border-l-4 border-green-500 pl-4">
+                    <h5 class="font-semibold text-slate-700" data-i18n="senol-gunes-complex">Şenol Güneş Sports Complex</h5>
+                    <p class="text-slate-600">Specialized ventilation solutions for large-scale sports venue</p>
+                  </div>
+
+                  <div class="border-l-4 border-purple-500 pl-4">
+                    <h5 class="font-semibold text-slate-700" data-i18n="expo-antalya">Expo Antalya</h5>
+                    <p class="text-slate-600">Versatile solutions demonstrating adaptation to different environments</p>
+                  </div>
+                </div>
+
+                <p class="text-sm text-slate-500 mt-4">
+                  <a href="http://cvsair.bg/" class="citation-link" target="_blank">Source: CVSAir Project Portfolio</a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Industry Context Section -->
+      <section id="industry-context" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="font-serif text-4xl font-bold mb-12 section-header" data-i18n="industry-context-section">2. Industry Context: The HVAC/HVACR Sector</h2>
+
+          <!-- HVAC vs HVACR -->
+          <div id="hvac-vs-hvacr" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="hvac-vs-hvacr-title">2.1 Understanding HVAC vs. HVACR</h3>
+
+            <div class="grid md:grid-cols-2 gap-8 mb-12">
+              <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-8">
+                <div class="flex items-center mb-6">
+                  <i class="fas fa-thermometer-half text-3xl text-blue-600 mr-4"></i>
+                  <h4 class="font-serif text-2xl font-semibold text-blue-800" data-i18n="hvac-title">HVAC</h4>
+                </div>
+                <h5 class="font-semibold text-lg mb-4 text-blue-700" data-i18n="hvac-full-name">Heating, Ventilation, and Air Conditioning</h5>
+                <p class="text-blue-600 mb-4">Comprehensive systems designed to regulate indoor environment, ensuring thermal comfort and acceptable air quality for occupants.</p>
+
+                <div class="bg-white rounded-lg p-4">
+                  <h6 class="font-semibold mb-2 text-blue-800" data-i18n="hvac-primary-focus">Primary Focus:</h6>
+                  <p class="text-sm text-blue-600">Human comfort and health in residential, commercial, and industrial buildings</p>
+                </div>
+              </div>
+
+              <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-8">
+                <div class="flex items-center mb-6">
+                  <i class="fas fa-snowflake text-3xl text-green-600 mr-4"></i>
+                  <h4 class="font-serif text-2xl font-semibold text-green-800" data-i18n="hvacr-title">HVACR</h4>
+                </div>
+                <h5 class="font-semibold text-lg mb-4 text-green-700" data-i18n="hvacr-full-name">Heating, Ventilation, Air Conditioning, and Refrigeration</h5>
+                <p class="text-green-600 mb-4">Extends HVAC scope to include specialized cooling and preservation technologies for perishable items and industrial processes.</p>
+
+                <div class="bg-white rounded-lg p-4">
+                  <h6 class="font-semibold mb-2 text-green-800" data-i18n="hvacr-primary-focus">Primary Focus:</h6>
+                  <p class="text-sm text-green-600">Comfort and cold storage for food service, healthcare, logistics, and manufacturing</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-slate-100 rounded-lg p-8">
+              <h4 class="font-serif text-2xl font-semibold mb-4 text-slate-800" data-i18n="key-market-implications">Key Market Implications</h4>
+              <div class="grid md:grid-cols-3 gap-6">
+                <div class="text-center">
+                  <i class="fas fa-user-graduate text-3xl text-purple-500 mb-3"></i>
+                  <h5 class="font-semibold text-slate-700 mb-2" data-i18n="specialized-expertise">Specialized Expertise</h5>
+                  <p class="text-sm text-slate-600">HVACR requires broader skill set including refrigeration principles and refrigerant handling certification</p>
+                </div>
+
+                <div class="text-center">
+                  <i class="fas fa-chart-line text-3xl text-blue-500 mb-3"></i>
+                  <h5 class="font-semibold text-slate-700 mb-2" data-i18n="market-opportunities">Market Opportunities</h5>
+                  <p class="text-sm text-slate-600">Broader client base across food service, healthcare, logistics, and manufacturing sectors</p>
+                </div>
+
+                <div class="text-center">
+                  <i class="fas fa-balance-scale text-3xl text-green-500 mb-3"></i>
+                  <h5 class="font-semibold text-slate-700 mb-2" data-i18n="revenue-stability">Revenue Stability</h5>
+                  <p class="text-sm text-slate-600" data-i18n="revenue-stability-desc">More consistent revenue stream with less seasonal dependence than traditional HVAC</p>
+                </div>
+              </div>
+
+              <p class="text-sm text-slate-500 mt-6">
+                Sources:
+                <a href="https://www.sjvc.edu/blog/hvac-r-101-what-you-need-to-know/" class="citation-link" target="_blank">HVAC-R 101</a> |
+                <a href="https://www.stvt.edu/difference-between-hvac-and-hvacr/" class="citation-link" target="_blank">HVAC vs HVACR</a>
+              </p>
+            </div>
+          </div>
+
+          <!-- Product Roles -->
+          <div id="product-roles" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="product-roles-title">2.2 Role of Specific Products in Ventilation Systems</h3>
+
+            <div class="grid md:grid-cols-2 gap-8 mb-12">
+              <!-- Jet Fans -->
+              <div class="bg-white rounded-lg p-8 shadow-sm border border-slate-200">
+                <div class="flex items-center mb-6">
+                  <i class="fas fa-wind text-3xl text-blue-600 mr-4"></i>
+                  <h4 class="font-serif text-2xl font-semibold text-slate-800" data-i18n="jet-fans">Jet Fans</h4>
+                </div>
+                <p class="text-slate-600 mb-4">Specialized fans creating powerful, directional airflow in large enclosed spaces without extensive ductwork.</p>
+
+                <h5 class="font-semibold text-lg mb-3 text-slate-700" data-i18n="jet-fans-key-apps">Key Applications:</h5>
+                <ul class="space-y-2 text-slate-600">
+                  <li class="flex items-start">
+                    <i class="fas fa-road text-blue-500 mt-1 mr-3"></i>
+                    <span>Road and rail tunnels (routine air quality and emergency smoke extraction)</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-parking text-green-500 mt-1 mr-3"></i>
+                    <span>Underground and multi-story parking garages (exhaust fume control)</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-industry text-purple-500 mt-1 mr-3"></i>
+                    <span>Large industrial facilities (temperature and air quality regulation)</span>
+                  </li>
+                </ul>
+
+                <p class="text-sm text-slate-500 mt-4">
+                  <a href="https://sntoom.net/axial-fan-vs-jet-fan-what-is-the-difference/" class="citation-link" target="_blank">Source: Jet Fan Applications</a>
+                </p>
+              </div>
+
+              <!-- Smoke Extraction Fans -->
+              <div class="bg-white rounded-lg p-8 shadow-sm border border-slate-200">
+                <div class="flex items-center mb-6">
+                  <i class="fas fa-fire text-3xl text-red-600 mr-4"></i>
+                  <h4 class="font-serif text-2xl font-semibold text-slate-800" data-i18n="smoke-extraction-fans">Smoke Extraction Fans</h4>
+                </div>
+                <p class="text-slate-600 mb-4">Critical life-safety components managing smoke, heat, and toxic gases during fire emergencies.</p>
+
+                <h5 class="font-semibold text-lg mb-3 text-slate-700" data-i18n="smoke-extraction-primary">Primary Functions:</h5>
+                <ul class="space-y-2 text-slate-600">
+                  <li class="flex items-start">
+                    <i class="fas fa-running text-orange-500 mt-1 mr-3"></i>
+                    <span>Maintain tenable conditions in escape routes for safe evacuation</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-eye text-blue-500 mt-1 mr-3"></i>
+                    <span>Improve visibility and reduce toxic gas concentration</span>
+                  </li>
+                  <li class="flex items-start">
+                    <i class="fas fa-fire-extinguisher text-red-500 mt-1 mr-3"></i>
+                    <span>Aid firefighters by clearing smoke for effective response</span>
+                  </li>
+                </ul>
+
+                <p class="text-sm text-slate-500 mt-4">
+                  <a href="https://controls.i-acs.co.uk/blog/1/what-is-a-smoke-extraction-system-30" class="citation-link" target="_blank">Source: Smoke Extraction Systems</a>
+                </p>
+              </div>
+            </div>
+
+            <!-- Additional Products -->
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-6">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-fan text-2xl text-blue-600 mr-3"></i>
+                  <h5 class="font-semibold text-lg text-slate-800" data-i18n="industrial-commercial-fans">Industrial & Commercial Fans</h5>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-1">
+                  <li>• Exhaust fans for contaminant removal</li>
+                  <li>• Roof fans for hot air extraction</li>
+                  <li>• Kitchen fans with grease filters</li>
+                  <li>• Specialized industrial applications</li>
+                </ul>
+              </div>
+
+              <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-6">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-recycle text-2xl text-green-600 mr-3"></i>
+                  <h5 class="font-semibold text-lg text-slate-800" data-i18n="heat-recovery-units">Heat Recovery Units</h5>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-1">
+                  <li>• Recover waste heat from exhaust air</li>
+                  <li>• Pre-heat incoming fresh air</li>
+                  <li>• Reduce energy consumption</li>
+                  <li>• Meet green building standards</li>
+                </ul>
+              </div>
+
+              <div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-6">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-shield-alt text-2xl text-purple-600 mr-3"></i>
+                  <h5 class="font-semibold text-lg text-slate-800" data-i18n="specialized-solutions">Specialized Solutions</h5>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-1">
+                  <li>• Explosion-proof fans (ATEX certified)</li>
+                  <li>• Shelter ventilation systems</li>
+                  <li>• Agricultural and farm fans</li>
+                  <li>• Silent operation models</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Competitive Landscape Section -->
+      <section id="competitive-landscape" class="py-16 bg-slate-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="font-serif text-4xl font-bold mb-12 section-header" data-i18n="competitive-landscape">3. Competitive Landscape</h2>
+
+          <!-- Local Competitors -->
+          <div id="local-competitors" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="direct-competitors">3.1 Direct Competitors in the Turkish Market</h3>
+
+            <div class="grid md:grid-cols-2 gap-8 mb-12">
+              <!-- Aironn -->
+              <div class="bg-white rounded-lg p-8 shadow-sm">
+                <div class="flex items-center mb-6">
+                  <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-industry text-blue-600 text-xl"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-serif text-2xl font-semibold text-slate-800" data-i18n="aironn">Aironn</h4>
+                    <p class="text-slate-600">Local Competitor</p>
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <div>
+                    <h5 class="font-semibold text-slate-700 mb-2" data-i18n="strategic-partnership">Strategic Partnership</h5>
+                    <p class="text-slate-600 text-sm">Collaboration with Italian company <strong>Comefri</strong> since 2012, leveraging 40-year industry experience and technological expertise.</p>
+                  </div>
+
+                  <div>
+                    <h5 class="font-semibold text-slate-700 mb-2" data-i18n="product-focus">Product Focus</h5>
+                    <p class="text-slate-600 text-sm">"Airlam" fans, fire and smoke extract fans, coil fans, and general air fans with accredited test laboratories.</p>
+                  </div>
+
+                  <div>
+                    <h5 class="font-semibold text-slate-700 mb-2" data-i18n="market-reach">Market Reach</h5>
+                    <p class="text-slate-600 text-sm">Targeting Europe, Middle East, Turkic Republics, and Russia through enhanced manufacturing capabilities.</p>
+                  </div>
+                </div>
+
+                <p class="text-sm text-slate-500 mt-4">
+                  <a href="https://www.hvac-turkey.com/online/pdf/2013.pdf" class="citation-link" target="_blank">Source: HVAC Turkey Industry Report</a>
+                </p>
+              </div>
+
+              <!-- Provent -->
+              <div class="bg-white rounded-lg p-8 shadow-sm">
+                <div class="flex items-center mb-6">
+                  <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                    <i class="fas fa-cogs text-green-600 text-xl"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-serif text-2xl font-semibold text-slate-800" data-i18n="provent">Provent</h4>
+                    <p class="text-slate-600">Local Competitor</p>
+                  </div>
+                </div>
+
+                <div class="space-y-4">
+                  <div>
+                    <h5 class="font-semibold text-slate-700 mb-2" data-i18n="manufacturing-strategy">Manufacturing Strategy</h5>
+                    <p class="text-slate-600 text-sm"><strong>Vertical integration</strong> with almost all components manufactured in-house for quality control and competitive pricing.</p>
+                  </div>
+
+                  <div>
+                    <h5 class="font-semibold text-slate-700 mb-2" data-i18n="product-range">Product Range</h5>
+                    <p class="text-slate-600 text-sm">Wide variety including <strong>chillers, air handling units, jet fans, and axial fans</strong> as one-stop shop solution.</p>
+                  </div>
+
+                  <div>
+                    <h5 class="font-semibold text-slate-700 mb-2" data-i18n="global-presence">Global Presence</h5>
+                    <p class="text-slate-600 text-sm">Distributorships in 12 countries, exports to 46 countries including Germany, Belgium, Netherlands, and MENA region.</p>
+                  </div>
+                </div>
+
+                <p class="text-sm text-slate-500 mt-4">
+                  <a href="https://www.hvac-turkey.com/provent-is-on-its-way-to-becoming-a-world-brand" class="citation-link" target="_blank">Source: Provent Company Profile</a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Global Competitors -->
+          <div id="global-competitors" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="global-competitors">3.2 Global Competitors</h3>
+
+            <div class="bg-white rounded-lg p-8 shadow-sm mb-8">
+              <div class="flex items-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mr-6">
+                  <i class="fas fa-globe text-blue-600 text-2xl"></i>
+                </div>
+                <div>
+                  <h4 class="font-serif text-3xl font-semibold text-slate-800" data-i18n="systemair-ab">Systemair AB</h4>
+                  <p class="text-slate-600">European Leader - Swedish Public Company</p>
+                </div>
+              </div>
+
+              <div class="grid md:grid-cols-3 gap-6 mb-6">
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-blue-600 mb-1">SEK 12.3B</div>
+                  <div class="text-sm text-slate-600">Annual Turnover</div>
+                  <div class="text-xs text-slate-500">(≈ €1.1 billion)</div>
+                </div>
+
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-green-600 mb-1">6,700</div>
+                  <div class="text-sm text-slate-600">Employees</div>
+                  <div class="text-xs text-slate-500">(51 countries)</div>
+                </div>
+
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-purple-600 mb-1">9%</div>
+                  <div class="text-sm text-slate-600">Growth Rate</div>
+                  <div class="text-xs text-slate-500">(Decade average)</div>
+                </div>
+              </div>
+
+              <div class="bg-slate-50 rounded-lg p-6">
+                <h5 class="font-semibold text-lg mb-4 text-slate-800" data-i18n="turkish-market-strategy">Turkish Market Strategy</h5>
+                <div class="space-y-3">
+                  <div class="flex items-start">
+                    <i class="fas fa-handshake text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                      <p class="text-slate-600"><strong>2012:</strong> Acquired majority stake (70% + 20%) in Turkish company <strong>HSK</strong></p>
+                    </div>
+                  </div>
+                  <div class="flex items-start">
+                    <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                    <div>
+                      <p class="text-slate-600"><strong>2025:</strong> Acquired remaining 10%, making <strong>Systemair HSK Türkiye</strong> wholly-owned subsidiary</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start">
+                    <i class="fas fa-industry text-purple-500 mt-1 mr-3"></i>
+                    <div>
+                      <p class="text-slate-600"><strong>Manufacturing:</strong> Modern 28,000 m² factory near Istanbul, 350 employees, EUR 55 million turnover</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p class="text-sm text-slate-500 mt-4">
+                Sources:
+                <a href="https://group.systemair.com/news/press-releases/2024/systemair-acquires-the-final-10-percent-of-the-shares-in-systemair-hsk-turkiye/" class="citation-link" target="_blank">Systemair Acquisition</a> |
+                <a href="https://group.systemair.com/about/our-brands/" class="citation-link" target="_blank">Systemair Brands</a>
+              </p>
+            </div>
+          </div>
+
+          <!-- Comparative Analysis -->
+          <div id="comparative-analysis" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="comparative-analysis">3.3 Comparative Analysis</h3>
+
+            <!-- Product Range Comparison Table -->
+            <div class="bg-white rounded-lg p-8 shadow-sm mb-8">
+              <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800" data-i18n="product-range-comparison">Product Range Comparison</h4>
+
+              <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                  <thead>
+                    <tr class="bg-slate-100">
+                      <th class="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-800">Product Category</th>
+                      <th class="border border-slate-300 px-4 py-3 text-center font-semibold text-blue-600">CVSAir</th>
+                      <th class="border border-slate-300 px-4 py-3 text-center font-semibold text-green-600">Aironn</th>
+                      <th class="border border-slate-300 px-4 py-3 text-center font-semibold text-purple-600">Systemair</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="border border-slate-300 px-4 py-3 font-medium text-slate-700">Jet Fans</td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Yes</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-question-circle text-yellow-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Not explicit</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Yes, Green Ventilation</div>
+                      </td>
+                    </tr>
+                    <tr class="bg-slate-50">
+                      <td class="border border-slate-300 px-4 py-3 font-medium text-slate-700">Smoke Extraction Fans</td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Yes</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Yes</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Specialized models</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="border border-slate-300 px-4 py-3 font-medium text-slate-700">Air Handling Units (AHUs)</td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Heat Recovery Units</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-times-circle text-red-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Not explicit</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Core product</div>
+                      </td>
+                    </tr>
+                    <tr class="bg-slate-50">
+                      <td class="border border-slate-300 px-4 py-3 font-medium text-slate-700">Explosion-Proof Fans</td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Exproof Fans</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-times-circle text-red-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Not explicit</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">ATEX certified</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="border border-slate-300 px-4 py-3 font-medium text-slate-700">Air Conditioning Systems</td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-times-circle text-red-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">No</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-times-circle text-red-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">No</div>
+                      </td>
+                      <td class="border border-slate-300 px-4 py-3 text-center">
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        <div class="text-xs text-slate-500 mt-1">Comprehensive range</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <p class="text-sm text-slate-500 mt-4">
+                Sources:
+                <a href="https://cvsair.com.tr/en/category/smoke-exhaust-fans/" class="citation-link" target="_blank">CVSAir Products</a> |
+                <a href="https://www.hvac-turkey.com/online/pdf/2013.pdf" class="citation-link" target="_blank">Aironn Profile</a> |
+                <a href="https://group.systemair.com/about/our-brands/" class="citation-link" target="_blank">Systemair Brands</a>
+              </p>
+            </div>
+
+            <!-- Market Strategy Comparison -->
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white rounded-lg p-6 shadow-sm">
+                <div class="flex items-center mb-4">
+                  <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-certificate text-blue-600"></i>
+                  </div>
+                  <h4 class="font-serif text-xl font-semibold text-slate-800">CVSAir</h4>
+                </div>
+                <h5 class="font-semibold text-slate-700 mb-2">Quality-Focused Strategy</h5>
+                <ul class="text-sm text-slate-600 space-y-1">
+                  <li>• AMCA membership differentiation</li>
+                  <li>• High-profile project participation</li>
+                  <li>• Technical support services</li>
+                  <li>• Engineering expertise emphasis</li>
+                </ul>
+              </div>
+
+              <div class="bg-white rounded-lg p-6 shadow-sm">
+                <div class="flex items-center mb-4">
+                  <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-handshake text-green-600"></i>
+                  </div>
+                  <h4 class="font-serif text-xl font-semibold text-slate-800">Aironn</h4>
+                </div>
+                <h5 class="font-semibold text-slate-700 mb-2">Partnership Strategy</h5>
+                <ul class="text-sm text-slate-600 space-y-1">
+                  <li>• International collaboration (Comefri)</li>
+                  <li>• Technology transfer benefits</li>
+                  <li>• Export market expansion</li>
+                  <li>• Quality enhancement focus</li>
+                </ul>
+              </div>
+
+              <div class="bg-white rounded-lg p-6 shadow-sm">
+                <div class="flex items-center mb-4">
+                  <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-globe text-purple-600"></i>
+                  </div>
+                  <h4 class="font-serif text-xl font-semibold text-slate-800">Systemair</h4>
+                </div>
+                <h5 class="font-semibold text-slate-700 mb-2">Global Integration Strategy</h5>
+                <ul class="text-sm text-slate-600 space-y-1">
+                  <li>• Strategic acquisitions (HSK)</li>
+                  <li>• Multi-brand portfolio approach</li>
+                  <li>• Sustainability emphasis</li>
+                  <li>• Glocal presence strategy</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Website and CRM Analysis Section -->
+      <section id="website-crm-analysis" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="font-serif text-4xl font-bold mb-12 section-header" data-i18n="website-crm-analysis">4. Website and CRM Analysis</h2>
+
+          <!-- Website Functionality -->
+          <div id="website-functionality" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="website-functionality">4.1 Current Website Functionality</h3>
+
+            <div class="grid md:grid-cols-2 gap-8 mb-12">
+              <div class="bg-slate-50 rounded-lg p-8">
+                <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800" data-i18n="website-overview">Website Overview</h4>
+                <div class="space-y-4">
+                  <div class="flex items-start">
+                    <i class="fas fa-globe text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="multi-language-support">Multi-language Support</h5>
+                      <p class="text-slate-600 text-sm">Turkish and English versions for international presence</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-sitemap text-green-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="well-structured-content">Well-structured Content</h5>
+                      <p class="text-slate-600 text-sm">Clear organization of products, services, certifications, and key projects</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-download text-purple-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="download-center">Download Center</h5>
+                      <p class="text-slate-600 text-sm">Product catalogs, instruction manuals, and technical documents</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-newspaper text-orange-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="news-updates">News & Updates</h5>
+                      <p class="text-slate-600 text-sm">Latest company developments and industry trends</p>
+                    </div>
+                  </div>
+                </div>
+
+                <p class="text-sm text-slate-500 mt-4">
+                  <a href="https://cvsair.com.tr/" class="citation-link" target="_blank">Source: cvsair.com.tr</a>
+                </p>
+              </div>
+
+              <div class="bg-slate-50 rounded-lg p-8">
+                <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800">Online Tools & Services</h4>
+
+                <div class="space-y-6">
+                  <div class="bg-white rounded-lg p-6 border border-blue-200">
+                    <div class="flex items-center mb-4">
+                      <i class="fas fa-calculator text-blue-600 text-xl mr-3"></i>
+                      <h5 class="font-semibold text-lg text-slate-800">Fan Selection System</h5>
+                    </div>
+                    <p class="text-slate-600 text-sm mb-3">Online tool allowing engineers to input project parameters and receive optimized fan recommendations.</p>
+                    <ul class="text-xs text-slate-500 space-y-1">
+                      <li>• Airflow and pressure requirements</li>
+                      <li>• Noise level specifications</li>
+                      <li>• Energy efficiency optimization</li>
+                      <li>• Cost and labor savings focus</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-white rounded-lg p-6 border border-green-200">
+                    <div class="flex items-center mb-4">
+                      <i class="fas fa-chart-line text-green-600 text-xl mr-3"></i>
+                      <h5 class="font-semibold text-lg text-slate-800">CFD Analysis Services</h5>
+                    </div>
+                    <p class="text-slate-600 text-sm mb-3">Advanced engineering service for airflow, smoke, and heat evacuation simulation.</p>
+                    <ul class="text-xs text-slate-500 space-y-1">
+                      <li>• Pre-installation simulation</li>
+                      <li>• Design optimization</li>
+                      <li>• Emergency scenario testing</li>
+                      <li>• Risk mitigation and cost avoidance</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <p class="text-sm text-slate-500 mt-4">
+                  <a href="http://cvsair.bg/" class="citation-link" target="_blank">Source: CVSAir Services</a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Improvement Areas -->
+          <div id="improvement-areas" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="improvement-areas">4.2 Areas for Improvement</h3>
+
+            <div class="grid md:grid-cols-3 gap-6 mb-12">
+              <div class="bg-red-50 rounded-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-chart-bar text-red-600 text-xl mr-3"></i>
+                  <h4 class="font-semibold text-lg text-slate-800" data-i18n="reporting-analytics">Reporting & Analytics</h4>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-2">
+                  <li data-i18n="limited-user-tracking">• Limited user behavior tracking</li>
+                  <li data-i18n="insufficient-performance-data">• Insufficient website performance data</li>
+                  <li data-i18n="lack-conversion-tracking">• Lack of conversion tracking</li>
+                  <li data-i18n="need-analytics-platform">• Need for advanced analytics platform</li>
+                </ul>
+              </div>
+
+              <div class="bg-yellow-50 rounded-lg p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-user-friends text-yellow-600 text-xl mr-3"></i>
+                  <h4 class="font-semibold text-lg text-slate-800" data-i18n="user-experience">User Experience</h4>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-2">
+                  <li data-i18n="navigation-intuitive">• Navigation could be more intuitive</li>
+                  <li data-i18n="product-pages-organization">• Product pages need better organization</li>
+                  <li data-i18n="mobile-optimization">• Mobile experience requires optimization</li>
+                  <li data-i18n="visual-design-modernized">• Visual design could be modernized</li>
+                </ul>
+              </div>
+
+              <div class="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center mb-4">
+                  <i class="fas fa-sitemap text-blue-600 text-xl mr-3"></i>
+                  <h4 class="font-semibold text-lg text-slate-800" data-i18n="content-architecture">Content & Architecture</h4>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-2">
+                  <li data-i18n="information-organization">• Information organization improvements</li>
+                  <li data-i18n="comprehensive-faq">• Need for comprehensive FAQ section</li>
+                  <li data-i18n="regular-content-updates">• Regular content updates required</li>
+                  <li data-i18n="technical-specifications">• Better technical specifications display</li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Detailed Recommendations -->
+            <div class="bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-lg p-8">
+              <h4 class="font-serif text-2xl font-semibold mb-6" data-i18n="strategic-recommendations-website">Strategic Recommendations for Website Enhancement</h4>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h5 class="font-semibold text-lg mb-4 text-blue-300" data-i18n="technical-improvements">Technical Improvements</h5>
+                  <ul class="space-y-2 text-sm">
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                      <span data-i18n="implement-google-analytics">Implement Google Analytics for comprehensive user behavior tracking</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                      <span data-i18n="enhance-mobile-responsiveness">Enhance mobile responsiveness and user interface</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                      <span data-i18n="optimize-page-loading">Optimize page loading speeds and performance</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-blue-300 mt-1 mr-3"></i>
+                      <span data-i18n="implement-seo-practices">Implement SEO best practices for better visibility</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h5 class="font-semibold text-lg mb-4 text-green-300" data-i18n="user-experience-enhancements">User Experience Enhancements</h5>
+                  <ul class="space-y-2 text-sm">
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-green-300 mt-1 mr-3"></i>
+                      <span data-i18n="redesign-navigation">Redesign navigation with clearer product categorization</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-green-300 mt-1 mr-3"></i>
+                      <span data-i18n="advanced-search-filtering">Add advanced search and filtering capabilities</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-green-300 mt-1 mr-3"></i>
+                      <span data-i18n="breadcrumb-navigation">Implement breadcrumb navigation for better user orientation</span>
+                    </li>
+                    <li class="flex items-start">
+                      <i class="fas fa-arrow-right text-green-300 mt-1 mr-3"></i>
+                      <span data-i18n="interactive-comparison-tools">Create interactive product comparison tools</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CRM Considerations -->
+          <div id="crm-considerations" class="mb-16">
+            <h3 class="font-serif text-3xl font-semibold mb-8 text-slate-800" data-i18n="crm-considerations">4.3 CRM System Considerations</h3>
+
+            <div class="grid md:grid-cols-2 gap-8 mb-12">
+              <div class="bg-white rounded-lg p-8 shadow-sm">
+                <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800" data-i18n="current-state-assessment">Current State Assessment</h4>
+                <div class="space-y-4">
+                  <div class="bg-yellow-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-yellow-800 mb-2" data-i18n="likely-present">Likely Present</h5>
+                    <ul class="text-sm text-yellow-700 space-y-1">
+                      <li data-i18n="basic-customer-db">• Basic customer database</li>
+                      <li data-i18n="contact-management">• Contact management</li>
+                      <li data-i18n="simple-sales-tracking">• Simple sales tracking</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-red-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-red-800 mb-2" data-i18n="potential-gaps">Potential Gaps</h5>
+                    <ul class="text-sm text-red-700 space-y-1">
+                      <li data-i18n="limited-integration">• Limited website integration</li>
+                      <li data-i18n="insufficient-lead-tracking">• Insufficient lead tracking</li>
+                      <li data-i18n="basic-reporting">• Basic reporting capabilities</li>
+                      <li data-i18n="manual-data-entry">• Manual data entry requirements</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-lg p-8 shadow-sm">
+                <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800" data-i18n="recommended-crm-enhancements">Recommended CRM Enhancements</h4>
+                <div class="space-y-4">
+                  <div class="flex items-start">
+                    <i class="fas fa-magnet text-blue-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="lead-management-automation">Lead Management Automation</h5>
+                      <p class="text-sm text-slate-600" data-i18n="lead-management-desc">Automatic lead capture from website forms and fan selection tools with intelligent assignment</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-users text-green-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="customer-segmentation">Customer Segmentation</h5>
+                      <p class="text-sm text-slate-600" data-i18n="segmentation-desc">Advanced segmentation by industry, project size, and engagement level for targeted marketing</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-link text-purple-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="website-integration">Website Integration</h5>
+                      <p class="text-sm text-slate-600" data-i18n="integration-desc">Seamless connection between website interactions and CRM for complete customer journey tracking</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-start">
+                    <i class="fas fa-chart-line text-orange-500 mt-1 mr-3"></i>
+                    <div>
+                      <h5 class="font-semibold text-slate-700" data-i18n="advanced-analytics">Advanced Analytics</h5>
+                      <p class="text-sm text-slate-600" data-i18n="analytics-desc">Comprehensive reporting on sales pipeline, customer behavior, and campaign effectiveness</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Integration Benefits -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-8">
+              <h4 class="font-serif text-2xl font-semibold mb-6 text-slate-800" data-i18n="integration-benefits">Integration Benefits for B2B Client Management</h4>
+
+              <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                  <h5 class="font-semibold text-lg mb-4 text-blue-800" data-i18n="sales-optimization">Sales Process Optimization</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-start">
+                      <i class="fas fa-bullseye text-blue-600 mt-1 mr-3"></i>
+                      <span class="text-slate-700 text-sm" data-i18n="automated-scoring">Automated lead scoring and qualification</span>
+                    </div>
+                    <div class="flex items-start">
+                      <i class="fas fa-route text-blue-600 mt-1 mr-3"></i>
+                      <span class="text-slate-700 text-sm" data-i18n="pipeline-management">Streamlined sales pipeline management</span>
+                    </div>
+                    <div class="flex items-start">
+                      <i class="fas fa-clock text-blue-600 mt-1 mr-3"></i>
+                      <span class="text-slate-700 text-sm" data-i18n="reduced-response-time">Reduced response time to inquiries</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 class="font-semibold text-lg mb-4 text-green-800" data-i18n="customer-experience">Customer Experience Enhancement</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-start">
+                      <i class="fas fa-user-cog text-green-600 mt-1 mr-3"></i>
+                      <span class="text-slate-700 text-sm" data-i18n="personalized-interactions">Personalized customer interactions</span>
+                    </div>
+                    <div class="flex items-start">
+                      <i class="fas fa-history text-green-600 mt-1 mr-3"></i>
+                      <span class="text-slate-700 text-sm" data-i18n="interaction-history">Complete interaction history tracking</span>
+                    </div>
+                    <div class="flex items-start">
+                      <i class="fas fa-handshake text-green-600 mt-1 mr-3"></i>
+                      <span class="text-slate-700 text-sm" data-i18n="relationship-management">Improved long-term relationship management</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="bg-slate-900 text-white py-12">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <div class="text-center">
+            <h3 class="font-serif text-2xl font-semibold mb-4">CVSAir Ventilation Systems Research Report</h3>
+            <p class="text-slate-400 mb-6">Comprehensive analysis of market position, competitive landscape, and digital transformation opportunities</p>
+
+            <div class="flex justify-center space-x-8 text-sm text-slate-500">
+              <span>© 2025 Research Report</span>
+              <span>•</span>
+              <span>Comprehensive Analysis</span>
+              <span>•</span>
+              <span>Strategic Recommendations</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+        // Initialize Vanta.js background
+        VANTA.NET({
+            el: "#vanta-bg",
+            mouseControls: true,
+            touchControls: true,
+            gyroControls: false,
+            minHeight: 200.00,
+            minWidth: 200.00,
+            scale: 1.00,
+            scaleMobile: 1.00,
+            color: 0x3b82f6,
+            backgroundColor: 0x0f172a,
+            points: 8.00,
+            maxDistance: 20.00,
+            spacing: 16.00
+        });
+
+        // Table of Contents functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const tocLinks = document.querySelectorAll('.toc-link');
+            const sections = document.querySelectorAll('section[id], div[id]');
+            
+            // Smooth scrolling for TOC links
+            tocLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetSection = document.getElementById(targetId);
+                    
+                    if (targetSection) {
+                        const offsetTop = targetSection.offsetTop - 100;
+                        window.scrollTo({
+                            top: offsetTop,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+            
+            // Active section highlighting
+            function updateActiveTocLink() {
+                let current = '';
+                const scrollPos = window.scrollY + 150;
+                
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    const sectionHeight = section.offsetHeight;
+                    
+                    if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                tocLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === '#' + current) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+            
+            // Throttled scroll event listener
+            let ticking = false;
+            function handleScroll() {
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        updateActiveTocLink();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            }
+            
+            window.addEventListener('scroll', handleScroll);
+            updateActiveTocLink(); // Initial call
+        });
+            
+        // Mobile TOC toggle
+        const tocToggle = document.getElementById('tocToggle');
+        const tocSidebar = document.getElementById('tocSidebar');
+        
+        if (tocToggle && tocSidebar) {
+            tocToggle.addEventListener('click', function() {
+                tocSidebar.classList.toggle('open');
+            });
+            
+            // Close TOC when clicking outside on mobile
+            document.addEventListener('click', function(event) {
+                if (window.innerWidth <= 1024) {
+                    const isClickInsideToc = tocSidebar.contains(event.target);
+                    const isClickOnToggle = tocToggle.contains(event.target);
+                    
+                    if (!isClickInsideToc && !isClickOnToggle && tocSidebar.classList.contains('open')) {
+                        tocSidebar.classList.remove('open');
+                    }
+                }
+            });
+        }
+
+        // Internationalization (i18n) System
+        // Translations are now loaded from external file: translations.js
+        // JavaScript functionality is now loaded from external file: edit-controls.js
+    </script>
+    
+    <!-- Load external JavaScript files -->
+    <script src="translations.js"></script>
+    <script src="edit-controls.js"></script>
+    
+    <!-- Initialize systems after DOM is loaded -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize translation system
+            if (typeof initializeTranslations === 'function') {
+                initializeTranslations();
+            }
+            
+            // Set up language buttons
+            const langEnBtn = document.getElementById('langEnBtn');
+            const langTrBtn = document.getElementById('langTrBtn');
+            
+            if (langEnBtn && langTrBtn) {
+                langEnBtn.addEventListener('click', () => {
+                    if (typeof updateLanguage === 'function') {
+                        updateLanguage('en');
+                    }
+                });
+                
+                langTrBtn.addEventListener('click', () => {
+                    if (typeof updateLanguage === 'function') {
+                        updateLanguage('tr');
+                    }
+                });
+                
+                // Update button states based on current language
+                const currentLang = localStorage.getItem('cvsair-language') || 'en';
+                if (currentLang === 'en') {
+                    langEnBtn.classList.add('bg-slate-200', 'border-slate-400');
+                    langTrBtn.classList.remove('bg-slate-200', 'border-slate-400');
+                } else {
+                    langTrBtn.classList.add('bg-slate-200', 'border-slate-400');
+                    langEnBtn.classList.remove('bg-slate-200', 'border-slate-400');
+                }
+            }
+        });
+    </script>
+  </body>
+
+</html>

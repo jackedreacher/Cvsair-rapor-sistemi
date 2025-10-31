@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://YOUR_RENDER_SERVICE.onrender.com/api/$1"
+    }
+  ]
+}

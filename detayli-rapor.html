@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Detaylı Rapor - CVSAir</title>
+  <!-- Plotly core script with defer to avoid blocking, and integrity fallback handled below -->
+  <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" defer></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1d29;
+      color: #ffffff;
+      overflow-x: hidden;
+    }
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 80px;
+      height: 100vh;
+      background: #252836;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      z-index: 1000;
+    }
+    .sidebar-item {
+      width: 40px;
+      height: 40px;
+      margin: 15px 0;
+      background: #3a3d4a;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: #ffffff;
+    }
+    .sidebar-item:hover { background: #4a4d5a; }
+    .sidebar-item.active { background: #6366f1; }
+    .main-content {
+      margin-left: 80px;
+      padding: 30px;
+      min-height: 100vh;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+    .header h1 {
+      font-size: 32px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+    .controls-section {
+      background: #252836;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #374151;
+      margin-bottom: 30px;
+    }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .control-label {
+      font-size: 14px;
+      color: #9ca3af;
+      font-weight: 500;
+    }
+    .control-input {
+      background: #1a1d29;
+      border: 1px solid #374151;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #ffffff;
+      font-size: 14px;
+    }
+    .control-input:focus {
+      outline: none;
+      border-color: #6366f1;
+    }
+    .btn {
+      background: #6366f1;
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+    .btn:hover {
+      background: #5855eb;
+    }
+    .btn-secondary {
+      background: #374151;
+    }
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+    .data-table {
+      background: #252836;
+      border-radius: 12px;
+      border: 1px solid #374151;
+      overflow: hidden;
+      margin-bottom: 30px;
+    }
+    .table-header {
+      background: #1a1d29;
+      padding: 20px;
+      border-bottom: 1px solid #374151;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .table-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .table-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .table-container {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .data-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th,
+    .data-table td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #374151;
+    }
+    .data-table th {
+      background: #1a1d29;
+      color: #9ca3af;
+      font-weight: 500;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      position: sticky;
+      top: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .data-table th:hover {
+      background: #252836;
+    }
+    .data-table th.sortable::after {
+      content: ' ↕';
+      opacity: 0.5;
+    }
+    .data-table th.sort-asc::after {
+      content: ' ↑';
+      opacity: 1;
+    }
+    .data-table th.sort-desc::after {
+      content: ' ↓';
+      opacity: 1;
+    }
+    .data-table td {
+      color: #ffffff;
+      font-size: 14px;
+    }
+    .data-table tr:hover {
+      background: #1a1d29;
+    }
+    .currency-usd { color: #10b981; }
+    .currency-eur { color: #f59e0b; }
+    .currency-gbp { color: #8b5cf6; }
+    .currency-tl { color: #ef4444; }
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 20px;
+      background: #1a1d29;
+    }
+    .pagination button {
+      background: #374151;
+      color: #ffffff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .pagination button:hover:not(:disabled) {
+      background: #4b5563;
+    }
+    .pagination button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .pagination .active {
+      background: #6366f1;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .stat-card {
+      background: #252836;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #374151;
+    }
+    .stat-label {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .filter-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    .filter-tag {
+      background: #374151;
+      color: #ffffff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .filter-tag .remove {
+      cursor: pointer;
+      opacity: 0.7;
+    }
+    .filter-tag .remove:hover {
+      opacity: 1;
+    }
+
+    /* Mobil hamburger menü stilleri */
+    .hamburger-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      width: 44px;
+      height: 44px;
+      display: none; /* sadece mobilde gösterilecek */
+      align-items: center;
+      justify-content: center;
+      background: #6366f1;
+      color: #ffffff;
+      border: 1px solid #4f46e5;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(99,102,241,0.35);
+      cursor: pointer;
+      z-index: 1100; /* sidebar(1000) üstünde */
+      transition: transform .2s ease, background .2s ease, left .3s ease;
+      pointer-events: auto;
+    }
+    .hamburger-btn:active { transform: scale(0.96); }
+
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+      z-index: 900;
+    }
+
+    /* Masaüstünde geçiş animasyonu için */
+    .sidebar { will-change: transform; transition: transform .3s ease; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); padding-top: 96px; }
+      .sidebar.open { transform: translateX(0); }
+      /* Mobilde hamburger görünür ve konum kontrol edilir */
+      .hamburger-btn { display: flex; left: 16px; }
+      /* Menü açıldığında hamburger sidebar'ın sağında konumlanır ve çakışmayı önler */
+      body.menu-open .hamburger-btn { left: calc(80px + 16px); }
+      .main-content { margin-left: 0; }
+      /* Başlık yazısı hamburger ile çakışmasın diye soldan boşluk bırak */
+      .header { padding-left: calc(44px + 24px); }
+      .sidebar.open ~ .sidebar-overlay { opacity: 1; pointer-events: auto; }
+      body.menu-open { overflow: hidden; }
+    }
+  </style>
+</head>
+<body>
+  <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menüyü Aç/Kapat" aria-expanded="false" aria-controls="siteSidebar">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="3" y="6" width="18" height="2" rx="1" fill="currentColor"/>
+      <rect x="3" y="11" width="18" height="2" rx="1" fill="currentColor"/>
+      <rect x="3" y="16" width="18" height="2" rx="1" fill="currentColor"/>
+    </svg>
+  </button>
+  <div class="sidebar" id="siteSidebar" aria-label="Ana menü">
+    <!-- Menü başlığı / logo alanı -->
+    <div class="sidebar-item" aria-hidden="true" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 2px solid #e9ecef; padding: 6px;">
+      <img src="LOGO.png" alt="CVS Air Logo" style="width: 28px; height: 28px; object-fit: contain;">
+    </div>
+
+    <a href="deneme.html" class="sidebar-item" aria-label="Paneller">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+      </svg>
+    </a>
+    <a href="detayli-rapor.html" class="sidebar-item active" aria-label="Detaylı Rapor">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+      </svg>
+    </a>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>Detaylı Sipariş Raporu</h1>
+      <div class="date-range" id="dateRange"></div>
+    </div>
+
+    <!-- Kontrol Paneli -->
+    <div class="controls-section">
+      <div class="controls-grid">
+        <div class="control-group">
+          <label class="control-label">Başlangıç Tarihi</label>
+          <input type="date" class="control-input" id="startDate">
+        </div>
+        <div class="control-group">
+          <label class="control-label">Bitiş Tarihi</label>
+          <input type="date" class="control-input" id="endDate">
+        </div>
+        <div class="control-group">
+          <label class="control-label">Döviz Cinsi</label>
+          <select class="control-input" id="currencyFilter">
+            <option value="">Tümü</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="TL">TL</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label class="control-label">Müşteri Ara</label>
+          <input type="text" class="control-input" id="customerSearch" placeholder="Müşteri adı...">
+        </div>
+        <div class="control-group">
+          <label class="control-label">Minimum Tutar</label>
+          <input type="number" class="control-input" id="minAmount" placeholder="0">
+        </div>
+        <div class="control-group">
+          <label class="control-label">Sayfa Başına</label>
+          <select class="control-input" id="pageSize">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">Tümü</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn" onclick="applyFilters()">Filtreleri Uygula</button>
+        <button class="btn btn-secondary" onclick="clearFilters()">Temizle</button>
+        <button class="btn btn-secondary" onclick="exportData()">Excel'e Aktar</button>
+      </div>
+      <div class="filter-tags" id="filterTags"></div>
+    </div>
+
+    <!-- İstatistikler -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-label">Toplam Sipariş</div>
+        <div class="stat-value" id="totalOrders">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Toplam Müşteri</div>
+        <div class="stat-value" id="totalCustomers">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Toplam Miktar</div>
+        <div class="stat-value" id="totalQuantity">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Toplam Tutar (USD)</div>
+        <div class="stat-value" id="totalAmount">-</div>
+      </div>
+    </div>
+
+    <!-- Veri Tablosu -->
+    <div class="data-table">
+      <div class="table-header">
+        <div class="table-title">Sipariş Detayları</div>
+        <div class="table-actions">
+          <button class="btn btn-secondary" onclick="toggleColumns()">Kolonları Yönet</button>
+        </div>
+      </div>
+      <div class="table-container">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th class="sortable" data-column="proje">Proje</th>
+              <th class="sortable" data-column="tarih">Sipariş Tarihi</th>
+              <th class="sortable" data-column="cari">Müşteri</th>
+              <th class="sortable" data-column="miktar">Miktar</th>
+              <th class="sortable" data-column="teslim">Teslim</th>
+              <th class="sortable" data-column="tutar">Tutar</th>
+              <th class="sortable" data-column="nettutar">Net Tutar</th>
+              <th class="sortable" data-column="doviz">Döviz</th>
+              <th class="sortable" data-column="kalanmik">Kalan Miktar</th>
+              <th class="sortable" data-column="kalannet">Kalan Net</th>
+              <th class="sortable" data-column="durum">Durum</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Veriler buraya yüklenecek -->
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination">
+        <!-- Sayfalama buraya yüklenecek -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Ensure Plotly is loaded and avoid 'Plotly is not defined' errors with CDN fallbacks
+    (function ensurePlotly(){
+      if (typeof window !== 'undefined' && typeof window.Plotly === 'undefined') {
+        const sources = [
+          'https://cdn.plot.ly/plotly-2.26.0.min.js',
+          'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.26.0/plotly.min.js',
+          'https://unpkg.com/plotly.js-dist-min@2.26.0/plotly.min.js'
+        ];
+        let i = 0;
+        const tryNext = () => {
+          if (i >= sources.length) return;
+          const s = document.createElement('script');
+          s.src = sources[i++];
+          s.async = true;
+          s.onload = () => console.log('Plotly loaded:', s.src);
+          s.onerror = () => { console.warn('Plotly load failed:', s.src); tryNext(); };
+          document.head.appendChild(s);
+        };
+        tryNext();
+        // Safety: define a no-op stub after 3s to prevent ReferenceError in rare cases
+        setTimeout(() => {
+          if (typeof window.Plotly === 'undefined') {
+            window.Plotly = { newPlot: () => console.warn('Plotly not available; chart rendering skipped.') };
+          }
+        }, 3000);
+      }
+    })();
+    let allData = [];
+    let filteredData = [];
+    let currentPage = 1;
+    let pageSize = 25;
+    let sortColumn = '';
+    let sortDirection = 'asc';
+
+    // Sayfa yüklendiğinde verileri al
+    document.addEventListener('DOMContentLoaded', function() {
+      loadData();
+      initColumnVisibility();
+    });
+
+    async function loadData() {
+      try {
+        // Try to fetch from API first
+        const response = await fetch('/api/orders');
+        
+        if (!response.ok) {
+          throw new Error(`API hatası: ${response.status}`);
+        }
+        
+        const apiResponse = await response.json();
+        
+        if (!apiResponse.success) {
+          throw new Error(apiResponse.error || 'API\'den veri alınamadı');
+        }
+        
+        // Normalize to new schema
+        const normalize = (row) => {
+          const num = (v) => {
+            if (v === null || v === undefined) return 0;
+            if (typeof v === 'number') return v;
+            const s = String(v).replace(/"/g, '').replace(/,/g, '').trim();
+            const n = parseFloat(s);
+            return isNaN(n) ? 0 : n;
+          };
+          const parseDate = (v) => {
+            if (!v) return null;
+            if (v instanceof Date) return v;
+            if (typeof v === 'number') {
+              if (v > 25569) return new Date((v - 25569) * 86400 * 1000);
+              return new Date(v);
+            }
+            const s = String(v);
+            const iso = new Date(s);
+            if (!isNaN(iso.getTime())) return iso;
+            const parts = s.split('.');
+            if (parts.length === 3) {
+              const d = parseInt(parts[0], 10);
+              const m = parseInt(parts[1], 10) - 1;
+              const y = parseInt(parts[2], 10);
+              return new Date(y, m, d);
+            }
+            return null;
+          };
+          const tarihRaw = row.tarih ?? row['SİPARİŞ TARİHİ'] ?? row.date;
+          const miktarRaw = row.miktar ?? row['MİKTAR'];
+          const kalanRaw = row.kalanmik ?? row['KALAN MİKTAR'];
+          const nettutarRaw = row.nettutar ?? row['SİPARİŞ NET TUTAR'] ?? row['KALAN SİPARİŞ NET TUTAR'];
+          const tutarRaw = row.tutar ?? row['SİPARİŞ BRÜT TUTAR'] ?? nettutarRaw;
+          const teslimCalc = (num(miktarRaw) - num(kalanRaw));
+          const projRaw = row.proje ?? row['PROJE'] ?? row['Sorumluluk Merkezi Adı'] ?? row['Proje'];
+          const srmkodRaw = row['Sorumluluk Merkezi'] ?? row.srmkod ?? row['Sorumluluk Merkezi Kodu'] ?? '';
+          const srmadRaw = row['Sorumluluk Merkezi Adı'] ?? row.srmad ?? '';
+          const dovizRaw = row.doviz ?? row['DOVİZ CİNSİ'] ?? 'TL';
+          const cariRaw = row.cari ?? row['CARİ İSMİ'] ?? row['Cari'] ?? '';
+          const kalannetRaw = row.kalannet ?? row['KALAN SİPARİŞ NET TUTAR'] ?? nettutarRaw;
+          const durumRaw = row.durum ?? (num(kalanRaw) > 0 ? 'Açık' : 'Kapalı');
+          const d = parseDate(tarihRaw) || new Date();
+          return {
+            tarih: d.toISOString(),
+            date: d,
+            cari: String(cariRaw || '').trim(),
+            srmkod: String(srmkodRaw || '').trim(),
+            srmad: String(srmadRaw || '').trim(),
+            miktar: num(miktarRaw),
+            teslim: teslimCalc < 0 ? 0 : teslimCalc,
+            tutar: num(tutarRaw),
+            nettutar: num(nettutarRaw),
+            doviz: String(dovizRaw || 'TL').trim(),
+            kalanmik: num(kalanRaw),
+            kalannet: num(kalannetRaw),
+            proje: String(projRaw || '').trim(),
+            durum: String(durumRaw || '').trim()
+          };
+        };
+        allData = (apiResponse.data || []).map(normalize);
+        
+        filteredData = [...allData];
+        updateStats();
+        renderTable();
+        renderPagination();
+        
+        console.log(`✅ ${allData.length} sipariş API'den yüklendi`);
+        
+      } catch (error) {
+        console.error('API yükleme hatası:', error);
+        
+        // Fallback to CSV data if API fails and normalize to new schema
+        const fallback = await getSampleData();
+        const num = (v) => {
+          if (v === null || v === undefined) return 0;
+          if (typeof v === 'number') return v;
+          const s = String(v).replace(/"/g, '').replace(/,/g, '').trim();
+          const n = parseFloat(s);
+          return isNaN(n) ? 0 : n;
+        };
+        const parseDate = (v) => {
+          if (!v) return null;
+          if (v instanceof Date) return v;
+          if (typeof v === 'number') {
+            if (v > 25569) return new Date((v - 25569) * 86400 * 1000);
+            return new Date(v);
+          }
+          const s = String(v);
+          const iso = new Date(s);
+          if (!isNaN(iso.getTime())) return iso;
+          const parts = s.split('.');
+          if (parts.length === 3) {
+            const d = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10) - 1;
+            const y = parseInt(parts[2], 10);
+            return new Date(y, m, d);
+          }
+          return null;
+        };
+        allData = (fallback || []).map(row => {
+          const tarihRaw = row.tarih ?? row['SİPARİŞ TARİHİ'] ?? row.date;
+          const miktarRaw = row.miktar ?? row['MİKTAR'];
+          const kalanRaw = row.kalanmik ?? row['KALAN MİKTAR'];
+          const nettutarRaw = row.nettutar ?? row['SİPARİŞ NET TUTAR'] ?? row['KALAN SİPARİŞ NET TUTAR'];
+          const tutarRaw = row.tutar ?? row['SİPARİŞ BRÜT TUTAR'] ?? nettutarRaw;
+          const teslimCalc = (num(miktarRaw) - num(kalanRaw));
+          const projRaw = row.proje ?? row['PROJE'] ?? row['Sorumluluk Merkezi Adı'] ?? row['Proje'];
+          const srmkodRaw = row['Sorumluluk Merkezi'] ?? row.srmkod ?? row['Sorumluluk Merkezi Kodu'] ?? '';
+          const srmadRaw = row['Sorumluluk Merkezi Adı'] ?? row.srmad ?? '';
+          const dovizRaw = row.doviz ?? row['DOVİZ CİNSİ'] ?? 'TL';
+          const cariRaw = row.cari ?? row['CARİ İSMİ'] ?? row['Cari'] ?? '';
+          const kalannetRaw = row.kalannet ?? row['KALAN SİPARİŞ NET TUTAR'] ?? nettutarRaw;
+          const durumRaw = row.durum ?? (num(kalanRaw) > 0 ? 'Açık' : 'Kapalı');
+          const d = parseDate(tarihRaw) || new Date();
+          return {
+            tarih: d.toISOString(),
+            date: d,
+            cari: String(cariRaw || '').trim(),
+            srmkod: String(srmkodRaw || '').trim(),
+            srmad: String(srmadRaw || '').trim(),
+            miktar: num(miktarRaw),
+            teslim: teslimCalc < 0 ? 0 : teslimCalc,
+            tutar: num(tutarRaw),
+            nettutar: num(nettutarRaw),
+            doviz: String(dovizRaw || 'TL').trim(),
+            kalanmik: num(kalanRaw),
+            kalannet: num(kalannetRaw),
+            proje: String(projRaw || '').trim(),
+            durum: String(durumRaw || '').trim()
+          };
+        });
+        filteredData = [...allData];
+        updateStats();
+        renderTable();
+        renderPagination();
+        
+        console.warn('API hatası nedeniyle CSV verileri kullanılıyor');
+      }
+    }
+
+    function parseCSV(csvText) {
+      const lines = csvText.trim().split('\n');
+      const headers = lines[0].split(',');
+      const data = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        if (!line || line.startsWith(',') || !line.includes(',')) {
+          continue;
+        }
+        
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        
+        if (values.length < headers.length) {
+          continue;
+        }
+        
+        const row = {};
+        
+        headers.forEach((header, index) => {
+          let value = values[index] ? values[index].trim().replace(/"/g, '') : '';
+          
+          if (header.includes('TUTAR') || header.includes('MİKTAR')) {
+            value = value.replace(/"/g, '').replace(/,/g, '').replace(/\s+/g, '');
+            row[header.trim()] = parseFloat(value) || 0;
+          } else {
+            row[header.trim()] = value;
+          }
+        });
+        
+        if ((row['SİPARİŞ TARİHİ'] && row['CARİ İSMİ']) || 
+            (row['DOVİZ CİNSİ'] && row['KALAN SİPARİŞ NET TUTAR'] && !row['SİPARİŞ TARİHİ'])) {
+          if (!row['SİPARİŞ TARİHİ'] && row['DOVİZ CİNSİ']) {
+            continue; // Özet satırlarını atla
+          }
+          
+          // Tarih formatını düzenle
+          if (row['SİPARİŞ TARİHİ']) {
+            const dateParts = row['SİPARİŞ TARİHİ'].split('.');
+            if (dateParts.length === 3) {
+              row.date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+            }
+          }
+          
+          data.push(row);
+        }
+      }
+      
+      return data;
+    }
+
+    // CSV'den veri okuyan yeni fallback (API hata alırsa)
+    async function getSampleData() {
+      try {
+        const resp = await fetch('orders.csv', { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`CSV yüklenemedi: ${resp.status}`);
+        const text = await resp.text();
+        const data = parseCSV(text);
+        console.log(`✅ CSV'den ${data.length} kayıt yüklendi (fallback)`);
+        return data;
+      } catch (err) {
+        console.error('CSV okuma hatası:', err);
+        return [];
+      }
+    }
+
+    function getLegacySampleData() {
+      return [
+        // Ocak 2025
+        {
+          'SİPARİŞ TARİHİ': '15.01.2025',
+          'CARİ İSMİ': 'METRO MARKET İSTANBUL',
+          'Sorumluluk Merkezi Adı': 'METRO MARKET İSTANBUL',
+          'MİKTAR': 75000,
+          'KALAN SİPARİŞ NET TUTAR': 75000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 75000,
+          date: new Date('2025-01-15')
+        },
+        {
+          'SİPARİŞ TARİHİ': '28.01.2025',
+          'CARİ İSMİ': 'CARREFOUR ANKARA',
+          'Sorumluluk Merkezi Adı': 'CARREFOUR ANKARA',
+          'MİKTAR': 52000,
+          'KALAN SİPARİŞ NET TUTAR': 52000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 52000,
+          date: new Date('2025-01-28')
+        },
+        // Şubat 2025
+        {
+          'SİPARİŞ TARİHİ': '12.02.2025',
+          'CARİ İSMİ': 'BİM MAĞAZALARI A.Ş.',
+          'Sorumluluk Merkezi Adı': 'BİM MAĞAZALARI A.Ş.',
+          'MİKTAR': 89000,
+          'KALAN SİPARİŞ NET TUTAR': 89000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 89000,
+          date: new Date('2025-02-12')
+        },
+        {
+          'SİPARİŞ TARİHİ': '25.02.2025',
+          'CARİ İSMİ': 'A101 YENI MAĞAZACILIK',
+          'Sorumluluk Merkezi Adı': 'A101 YENI MAĞAZACILIK',
+          'MİKTAR': 34000,
+          'KALAN SİPARİŞ NET TUTAR': 34000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 34000,
+          date: new Date('2025-02-25')
+        },
+        // Mart 2025
+        {
+          'SİPARİŞ TARİHİ': '08.03.2025',
+          'CARİ İSMİ': 'ŞOK MARKETLER TİC.',
+          'Sorumluluk Merkezi Adı': 'ŞOK MARKETLER TİC.',
+          'MİKTAR': 67000,
+          'KALAN SİPARİŞ NET TUTAR': 67000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 67000,
+          date: new Date('2025-03-08')
+        },
+        {
+          'SİPARİŞ TARİHİ': '22.03.2025',
+          'CARİ İSMİ': 'MİGROS TİC. A.Ş.',
+          'Sorumluluk Merkezi Adı': 'MİGROS TİC. A.Ş.',
+          'MİKTAR': 125000,
+          'KALAN SİPARİŞ NET TUTAR': 125000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 125000,
+          date: new Date('2025-03-22')
+        },
+        // Nisan 2025
+        {
+          'SİPARİŞ TARİHİ': '10.04.2025',
+          'CARİ İSMİ': 'TEKNOSA ELEKTRONİK',
+          'Sorumluluk Merkezi Adı': 'TEKNOSA ELEKTRONİK',
+          'MİKTAR': 43000,
+          'KALAN SİPARİŞ NET TUTAR': 43000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 43000,
+          date: new Date('2025-04-10')
+        },
+        {
+          'SİPARİŞ TARİHİ': '28.04.2025',
+          'CARİ İSMİ': 'VATAN BİLGİSAYAR',
+          'Sorumluluk Merkezi Adı': 'VATAN BİLGİSAYAR',
+          'MİKTAR': 78000,
+          'KALAN SİPARİŞ NET TUTAR': 78000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 78000,
+          date: new Date('2025-04-28')
+        },
+        // Mayıs 2025
+        {
+          'SİPARİŞ TARİHİ': '15.05.2025',
+          'CARİ İSMİ': 'KOÇTAŞ YAPI MARKET',
+          'Sorumluluk Merkezi Adı': 'KOÇTAŞ YAPI MARKET',
+          'MİKTAR': 95000,
+          'KALAN SİPARİŞ NET TUTAR': 95000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 95000,
+          date: new Date('2025-05-15')
+        },
+        {
+          'SİPARİŞ TARİHİ': '30.05.2025',
+          'CARİ İSMİ': 'BAUHAUS TÜRK LTD',
+          'Sorumluluk Merkezi Adı': 'BAUHAUS TÜRK LTD',
+          'MİKTAR': 56000,
+          'KALAN SİPARİŞ NET TUTAR': 56000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 56000,
+          date: new Date('2025-05-30')
+        },
+        // Haziran 2025
+        {
+          'SİPARİŞ TARİHİ': '12.06.2025',
+          'CARİ İSMİ': 'LC WAİKİKİ MAĞAZA',
+          'Sorumluluk Merkezi Adı': 'LC WAİKİKİ MAĞAZA',
+          'MİKTAR': 38000,
+          'KALAN SİPARİŞ NET TUTAR': 38000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 38000,
+          date: new Date('2025-06-12')
+        },
+        {
+          'SİPARİŞ TARİHİ': '25.06.2025',
+          'CARİ İSMİ': 'DEFACTO PERAKENDE',
+          'Sorumluluk Merkezi Adı': 'DEFACTO PERAKENDE',
+          'MİKTAR': 72000,
+          'KALAN SİPARİŞ NET TUTAR': 72000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 72000,
+          date: new Date('2025-06-25')
+        },
+        // Temmuz 2025
+        {
+          'SİPARİŞ TARİHİ': '08.07.2025',
+          'CARİ İSMİ': 'BOYNER BÜYÜK MAĞAZA',
+          'Sorumluluk Merkezi Adı': 'BOYNER BÜYÜK MAĞAZA',
+          'MİKTAR': 84000,
+          'KALAN SİPARİŞ NET TUTAR': 84000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 84000,
+          date: new Date('2025-07-08')
+        },
+        {
+          'SİPARİŞ TARİHİ': '20.07.2025',
+          'CARİ İSMİ': 'MANGO MAĞAZACILIK',
+          'Sorumluluk Merkezi Adı': 'MANGO MAĞAZACILIK',
+          'MİKTAR': 29000,
+          'KALAN SİPARİŞ NET TUTAR': 29000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 29000,
+          date: new Date('2025-07-20')
+        },
+        // Ağustos 2025
+        {
+          'SİPARİŞ TARİHİ': '18.08.2025',
+          'CARİ İSMİ': 'DFN MALATYA 1262',
+          'Sorumluluk Merkezi Adı': 'DFN MALATYA 1262',
+          'MİKTAR': 45000,
+          'KALAN SİPARİŞ NET TUTAR': 45000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 45000,
+          date: new Date('2025-08-18')
+        },
+        {
+          'SİPARİŞ TARİHİ': '22.08.2025',
+          'CARİ İSMİ': 'TEKNO MARKET 45',
+          'Sorumluluk Merkezi Adı': 'TEKNO MARKET 45',
+          'MİKTAR': 12500,
+          'KALAN SİPARİŞ NET TUTAR': 12500,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 12500,
+          date: new Date('2025-08-22')
+        },
+        // Eylül 2025
+        {
+          'SİPARİŞ TARİHİ': '05.09.2025',
+          'CARİ İSMİ': 'MEDIA MARKT TÜRK',
+          'Sorumluluk Merkezi Adı': 'MEDIA MARKT TÜRK',
+          'MİKTAR': 91000,
+          'KALAN SİPARİŞ NET TUTAR': 91000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 91000,
+          date: new Date('2025-09-05')
+        },
+        {
+          'SİPARİŞ TARİHİ': '18.09.2025',
+          'CARİ İSMİ': 'GOLD BİLGİSAYAR',
+          'Sorumluluk Merkezi Adı': 'GOLD BİLGİSAYAR',
+          'MİKTAR': 37000,
+          'KALAN SİPARİŞ NET TUTAR': 37000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 37000,
+          date: new Date('2025-09-18')
+        },
+        // Ekim 2025
+        {
+          'SİPARİŞ TARİHİ': '10.10.2025',
+          'CARİ İSMİ': 'IKEA TÜRKİYE',
+          'Sorumluluk Merkezi Adı': 'IKEA TÜRKİYE',
+          'MİKTAR': 156000,
+          'KALAN SİPARİŞ NET TUTAR': 156000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 156000,
+          date: new Date('2025-10-10')
+        },
+        {
+          'SİPARİŞ TARİHİ': '25.10.2025',
+          'CARİ İSMİ': 'DECATHLON TÜRKİYE',
+          'Sorumluluk Merkezi Adı': 'DECATHLON TÜRKİYE',
+          'MİKTAR': 63000,
+          'KALAN SİPARİŞ NET TUTAR': 63000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 63000,
+          date: new Date('2025-10-25')
+        },
+        // Kasım 2025
+        {
+          'SİPARİŞ TARİHİ': '08.11.2025',
+          'CARİ İSMİ': 'ZARA TÜRKİYE',
+          'Sorumluluk Merkezi Adı': 'ZARA TÜRKİYE',
+          'MİKTAR': 118000,
+          'KALAN SİPARİŞ NET TUTAR': 118000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 118000,
+          date: new Date('2025-11-08')
+        },
+        {
+          'SİPARİŞ TARİHİ': '22.11.2025',
+          'CARİ İSMİ': 'H&M HENNES MAURITZ',
+          'Sorumluluk Merkezi Adı': 'H&M HENNES MAURITZ',
+          'MİKTAR': 47000,
+          'KALAN SİPARİŞ NET TUTAR': 47000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 47000,
+          date: new Date('2025-11-22')
+        },
+        // Aralık 2025
+        {
+          'SİPARİŞ TARİHİ': '12.12.2025',
+          'CARİ İSMİ': 'TRENDYOL GROUP',
+          'Sorumluluk Merkezi Adı': 'TRENDYOL GROUP',
+          'MİKTAR': 203000,
+          'KALAN SİPARİŞ NET TUTAR': 203000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 203000,
+          date: new Date('2025-12-12')
+        },
+        {
+          'SİPARİŞ TARİHİ': '28.12.2025',
+          'CARİ İSMİ': 'HEPSİBURADA E-TİC.',
+          'Sorumluluk Merkezi Adı': 'HEPSİBURADA E-TİC.',
+          'MİKTAR': 87000,
+          'KALAN SİPARİŞ NET TUTAR': 87000,
+          'DOVİZ CİNSİ': 'TL',
+          'KALAN MİKTAR': 87000,
+          date: new Date('2025-12-28')
+        }
+      ];
+    }
+
+    function applyFilters() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const currency = document.getElementById('currencyFilter').value;
+      const customer = document.getElementById('customerSearch').value.toLowerCase();
+      const minAmount = parseFloat(document.getElementById('minAmount').value) || 0;
+      
+      filteredData = allData.filter(row => {
+        // Tarih filtresi
+        if (startDate && row.date && row.date < new Date(startDate)) return false;
+        if (endDate && row.date && row.date > new Date(endDate)) return false;
+        
+        // Döviz filtresi
+        if (currency && row.doviz !== currency) return false;
+        
+        // Müşteri filtresi
+        if (customer && !String(row.cari || '').toLowerCase().includes(customer)) return false;
+        
+        // Minimum tutar filtresi
+        if (minAmount && (row.kalannet || 0) < minAmount) return false;
+        
+        return true;
+      });
+      
+      currentPage = 1;
+      updateStats();
+      renderTable();
+      renderPagination();
+      updateFilterTags();
+    }
+
+    function clearFilters() {
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('currencyFilter').value = '';
+      document.getElementById('customerSearch').value = '';
+      document.getElementById('minAmount').value = '';
+      
+      filteredData = [...allData];
+      currentPage = 1;
+      updateStats();
+      renderTable();
+      renderPagination();
+      updateFilterTags();
+    }
+
+    function updateFilterTags() {
+      const container = document.getElementById('filterTags');
+      container.innerHTML = '';
+      
+      const filters = [];
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const currency = document.getElementById('currencyFilter').value;
+      const customer = document.getElementById('customerSearch').value;
+      const minAmount = document.getElementById('minAmount').value;
+      
+      if (startDate) filters.push({label: `Başlangıç: ${startDate}`, field: 'startDate'});
+      if (endDate) filters.push({label: `Bitiş: ${endDate}`, field: 'endDate'});
+      if (currency) filters.push({label: `Döviz: ${currency}`, field: 'currencyFilter'});
+      if (customer) filters.push({label: `Müşteri: ${customer}`, field: 'customerSearch'});
+      if (minAmount) filters.push({label: `Min Tutar: ${minAmount}`, field: 'minAmount'});
+      
+      filters.forEach(filter => {
+        const tag = document.createElement('div');
+        tag.className = 'filter-tag';
+        tag.innerHTML = `${filter.label} <span class="remove" onclick="removeFilter('${filter.field}')">×</span>`;
+        container.appendChild(tag);
+      });
+    }
+
+    function removeFilter(field) {
+      document.getElementById(field).value = '';
+      applyFilters();
+    }
+
+    function updateStats() {
+      const totalOrders = filteredData.length;
+      const totalCustomers = new Set(filteredData.map(row => row.cari)).size;
+      const totalQuantity = filteredData.reduce((sum, row) => sum + (row.miktar || 0), 0);
+      const totalAmount = filteredData.reduce((sum, row) => {
+        if (row.doviz === 'USD') {
+          return sum + (row.kalannet || 0);
+        }
+        return sum;
+      }, 0);
+      
+      document.getElementById('totalOrders').textContent = totalOrders.toLocaleString();
+      document.getElementById('totalCustomers').textContent = totalCustomers.toLocaleString();
+      document.getElementById('totalQuantity').textContent = totalQuantity.toLocaleString();
+      document.getElementById('totalAmount').textContent = '$' + totalAmount.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+    }
+
+    function sortData(column) {
+      if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+      }
+      
+      filteredData.sort((a, b) => {
+        let aVal = a[column];
+        let bVal = b[column];
+        
+        if (column === 'tarih') {
+          aVal = a.date;
+          bVal = b.date;
+        }
+        
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        
+        if (aVal instanceof Date && bVal instanceof Date) {
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        
+        const aStr = String(aVal || '').toLowerCase();
+        const bStr = String(bVal || '').toLowerCase();
+        
+        if (sortDirection === 'asc') {
+          return aStr.localeCompare(bStr, 'tr');
+        } else {
+          return bStr.localeCompare(aStr, 'tr');
+        }
+      });
+      
+      renderTable();
+      updateSortHeaders();
+    }
+
+    function updateSortHeaders() {
+      document.querySelectorAll('th.sortable').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (th.dataset.column === sortColumn) {
+          th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+        }
+      });
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('tableBody');
+      const start = (currentPage - 1) * pageSize;
+      const end = pageSize === 'all' ? filteredData.length : start + parseInt(pageSize);
+      const pageData = filteredData.slice(start, end);
+      
+
+      
+      tbody.innerHTML = pageData.map(row => {
+        const currency = row.doviz || 'TL';
+        const currencyClass = `currency-${String(currency).toLowerCase()}`;
+        return `
+          <tr>
+            <td data-column="proje">${row.proje || '-'}</td>
+            <td data-column="tarih">${(row.tarih || '').slice(0,10)}</td>
+            <td data-column="cari">${row.cari || '-'}</td>
+            <td data-column="miktar">${(row.miktar || 0).toLocaleString('tr-TR')}</td>
+            <td data-column="teslim">${(row.teslim || 0).toLocaleString('tr-TR')}</td>
+            <td data-column="tutar" class="${currencyClass}">${(row.tutar || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency}</td>
+            <td data-column="nettutar" class="${currencyClass}">${(row.nettutar || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency}</td>
+            <td data-column="doviz"><span class="${currencyClass}">${currency}</span></td>
+            <td data-column="kalanmik">${(row.kalanmik || 0).toLocaleString('tr-TR')}</td>
+            <td data-column="kalannet" class="${currencyClass}">${(row.kalannet || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency}</td>
+            <td data-column="durum">${row.durum || '-'}</td>
+          </tr>
+        `;
+      }).join('');
+      
+      applyColumnVisibility();
+    }
+
+    function renderPagination() {
+      const container = document.getElementById('pagination');
+      const totalPages = pageSize === 'all' ? 1 : Math.ceil(filteredData.length / pageSize);
+      
+      if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+      
+      let html = `
+        <button onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''}>İlk</button>
+        <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Önceki</button>
+      `;
+      
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, currentPage + 2);
+      
+      for (let i = startPage; i <= endPage; i++) {
+        html += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      }
+      
+      html += `
+        <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Sonraki</button>
+        <button onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>Son</button>
+      `;
+      
+      container.innerHTML = html;
+    }
+
+    function changePage(page) {
+      currentPage = page;
+      renderTable();
+      renderPagination();
+    }
+
+    function exportData() {
+      const headers = ['Sipariş Tarihi','Müşteri','SRM Kod','SRM Adı','Miktar','Teslim','Tutar','Net Tutar','Döviz','Kalan Miktar','Kalan Net','Proje','Durum'];
+      const csvContent = [headers.join(',')];
+      
+      filteredData.forEach(row => {
+        const csvRow = [
+          (row.tarih || '').slice(0,10),
+          `"${row.cari || ''}"`,
+          `"${row.srmkod || ''}"`,
+          `"${row.srmad || ''}"`,
+          (row.miktar || 0),
+          (row.teslim || 0),
+          (row.tutar || 0),
+          (row.nettutar || 0),
+          row.doviz || '',
+          (row.kalanmik || 0),
+          (row.kalannet || 0),
+          `"${row.proje || ''}"`,
+          `"${row.durum || ''}"`
+        ];
+        csvContent.push(csvRow.join(','));
+      });
+      
+      const blob = new Blob([csvContent.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `detayli_rapor_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+    }
+
+    // Sayfa boyutu değiştiğinde
+    document.getElementById('pageSize').addEventListener('change', function() {
+      pageSize = this.value === 'all' ? 'all' : parseInt(this.value);
+      currentPage = 1;
+      renderTable();
+      renderPagination();
+    });
+
+    // Sıralama için tıklama olayları
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('sortable')) {
+        sortData(e.target.dataset.column);
+      }
+    });
+
+    // Kolon görünürlüğü yönetimi
+    let visibleColumns = new Set();
+    
+    function getAllColumns() {
+      return Array.from(document.querySelectorAll('thead th[data-column]')).map(th => th.dataset.column);
+    }
+    
+    function initColumnVisibility() {
+      const saved = JSON.parse(localStorage.getItem('detayliRapor_visibleColumns') || 'null');
+      const all = getAllColumns();
+      if (saved && Array.isArray(saved) && saved.length) {
+        visibleColumns = new Set(saved.filter(c => all.includes(c)));
+      } else {
+        visibleColumns = new Set(all);
+      }
+      applyColumnVisibility();
+    }
+    
+    function applyColumnVisibility() {
+      const all = getAllColumns();
+      const toShow = visibleColumns.size ? visibleColumns : new Set(all);
+      // Başlıkları ve hücreleri tek tek göster/gizle
+      all.forEach(col => {
+        const show = toShow.has(col);
+        document.querySelectorAll(`th[data-column="${col}"]`).forEach(el => { el.style.display = show ? '' : 'none'; });
+        document.querySelectorAll(`td[data-column="${col}"]`).forEach(el => { el.style.display = show ? '' : 'none'; });
+      });
+    }
+    
+    function toggleColumns() {
+      openColumnManager();
+    }
+    
+    function openColumnManager() {
+      const all = getAllColumns();
+      const toShow = visibleColumns.size ? visibleColumns : new Set(all);
+    
+      const overlay = document.createElement('div');
+      overlay.id = 'columnManagerOverlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      const modal = document.createElement('div');
+      modal.style.cssText = 'background:#252836;color:#e5e7eb;border:1px solid #374151;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);width:520px;max-width:92vw;padding:18px;';
+      modal.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3 style="margin:0;font-size:16px;color:#ffffff;">Kolonları Yönet</h3>
+          <button style="border:none;background:transparent;font-size:20px;color:#9ca3af;cursor:pointer;" aria-label="Kapat">×</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;max-height:52vh;overflow:auto;padding-right:6px;" id="columnCheckboxes">
+          ${all.map(col => `
+            <label style="display:flex;gap:10px;align-items:center;padding:8px 10px;background:#1a1d29;border:1px solid #374151;border-radius:8px;">
+              <input type="checkbox" value="${col}" ${toShow.has(col) ? 'checked' : ''} style="width:18px;height:18px;accent-color:#6366f1;"/>
+              <span style="color:#e5e7eb;font-size:14px;">${col}</span>
+            </label>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px;">
+          <div style="display:flex;gap:8px;">
+            <button id="selectAllBtn" class="btn btn-secondary">Tümünü Seç</button>
+            <button id="clearAllBtn" class="btn btn-secondary">Tümünü Kaldır</button>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button id="cancelBtn" class="btn btn-secondary">İptal</button>
+            <button id="applyBtn" class="btn" style="background:#6366f1;">Uygula</button>
+          </div>
+        </div>
+      `;
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+    
+      const close = () => overlay.remove();
+      modal.querySelector('button[aria-label="Kapat"]').onclick = close;
+      modal.querySelector('#cancelBtn').onclick = close;
+      modal.querySelector('#selectAllBtn').onclick = () => modal.querySelectorAll('#columnCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = true);
+      modal.querySelector('#clearAllBtn').onclick = () => modal.querySelectorAll('#columnCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+      modal.querySelector('#applyBtn').onclick = () => {
+        const selected = Array.from(modal.querySelectorAll('#columnCheckboxes input[type="checkbox"]:checked')).map(cb => cb.value);
+        const allCols = getAllColumns();
+        visibleColumns = new Set(selected.length ? selected : allCols);
+        localStorage.setItem('detayliRapor_visibleColumns', JSON.stringify(Array.from(visibleColumns)));
+        applyColumnVisibility();
+        close();
+      };
+    }
+
+    // Mobil hamburger menü kontrolü
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn = document.getElementById('hamburgerBtn');
+      const sidebar = document.getElementById('siteSidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+
+      if (!btn || !sidebar || !overlay) return;
+
+      const openMenu = () => {
+        sidebar.classList.add('open');
+        document.body.classList.add('menu-open');
+        btn.setAttribute('aria-expanded', 'true');
+      };
+      const closeMenu = () => {
+        sidebar.classList.remove('open');
+        document.body.classList.remove('menu-open');
+        btn.setAttribute('aria-expanded', 'false');
+      };
+      const toggleMenu = () => {
+        if (sidebar.classList.contains('open')) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      };
+
+      btn.addEventListener('click', toggleMenu);
+      overlay.addEventListener('click', closeMenu);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
+      });
+    });
+  </script>
+</body>
+</html>

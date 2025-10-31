@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Order GA Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1d29;
+      color: #ffffff;
+      overflow-x: hidden;
+    }
+    .hamburger-btn {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      width: 44px;
+      height: 44px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: #6366f1;
+      color: #ffffff;
+      border: 1px solid #4f46e5;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(99,102,241,0.35);
+      cursor: pointer;
+      z-index: 1100;
+      transition: transform .2s ease, background .2s ease, left .3s ease;
+      pointer-events: auto;
+    }
+    .hamburger-btn:active {
+      transform: scale(0.96);
+    }
+    .hamburger-btn svg {
+      color: #ffffff;
+    }
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 80px;
+      height: 100vh;
+      background: #252836;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+    .sidebar-item {
+      width: 40px;
+      height: 40px;
+      margin: 15px 0;
+      background: #3a3d4a;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: #ffffff;
+    }
+    .sidebar-item:hover { background: #4a4d5a; }
+    .sidebar-item.active { background: #6366f1; box-shadow: 0 8px 24px rgba(99,102,241,0.35); }
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s ease;
+      z-index: 900;
+    }
+    .main-content {
+      margin-left: 80px;
+      padding: 30px;
+      min-height: 100vh;
+    }
+    
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        padding-top: 96px;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .hamburger-btn {
+        display: flex;
+        left: 16px;
+      }
+      body.menu-open .hamburger-btn {
+        left: calc(80px + 16px);
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 20px;
+      }
+      .header {
+        padding-left: calc(44px + 24px);
+      }
+      .header h1 {
+        line-height: 1.1;
+      }
+      .sidebar.open ~ .sidebar-overlay {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      body.menu-open {
+        overflow: hidden;
+      }
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+    }
+    .header h1 {
+      font-size: 32px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .date-range {
+      background: #252836;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #9ca3af;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .metric-card {
+      background: #252836;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #374151;
+    }
+    .metric-label {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .metric-change {
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .metric-change.positive { color: #10b981; }
+    .metric-change.negative { color: #ef4444; }
+    .chart-section {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .chart-card {
+      background: #252836;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #374151;
+    }
+    .chart-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 20px;
+    }
+    .upload-section {
+      background: #1e1e2e;
+      border: 1px solid #313244;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .upload-section h2 {
+      color: #cdd6f4;
+      margin-bottom: 15px;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .load-btn {
+      background: #89b4fa;
+      color: #1e1e2e;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+    .load-btn:hover {
+      background: #74c0fc;
+    }
+    #dataStatus {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #a6adc8;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .metric-card {
+      background: #1e1e2e;
+      border: 1px solid #313244;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .metric-label {
+      color: #a6adc8;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      color: #cdd6f4;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .metric-change {
+      color: #a6e3a1;
+      font-size: 12px;
+    }
+    .chart-section {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .chart-card {
+      background: #1e1e2e;
+      border: 1px solid #313244;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .chart-title {
+      color: #cdd6f4;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    .bottom-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    #daily-line, #source-pie, #bar-cari {
+      height: 400px;
+      background: #181825;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    .table-card {
+      background: #1e1e2e;
+      border: 1px solid #313244;
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 24px;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th, .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #2b2e3b;
+      color: #cdd6f4;
+    }
+    .data-table th {
+      text-align: left;
+      color: #a6adc8;
+      font-weight: 600;
+      background: #252836;
+    }
+    .data-table tr:hover td {
+      background: #222436;
+    }
+    .currency-usd { color: #a6e3a1; }
+    .currency-eur { color: #89b4fa; }
+    .currency-tl { color: #fab387; }
+  </style>
+</head>
+<body>
+  <button class="hamburger-btn" id="hamburgerBtn" aria-controls="siteSidebar" aria-expanded="false" aria-label="Menüyü aç/kapat">
+    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="6" width="18" height="2" rx="1" fill="currentColor"/>
+      <rect x="3" y="11" width="18" height="2" rx="1" fill="currentColor"/>
+      <rect x="3" y="16" width="18" height="2" rx="1" fill="currentColor"/>
+    </svg>
+  </button>
+  <div class="sidebar" id="siteSidebar" aria-label="Ana menü">
+    <!-- Menü başlığı / logo alanı -->
+    <div class="sidebar-item" aria-hidden="true" style="background: linear-gradient(135deg, #ffffff, #f8f9fa); box-shadow: 0 8px 24px rgba(0,0,0,0.15); border: 2px solid #e9ecef; padding: 6px;">
+      <img src="LOGO.png" alt="CVS Air Logo" style="width: 28px; height: 28px; object-fit: contain;">
+    </div>
+
+    <a href="deneme.html" class="sidebar-item active" aria-label="Paneller">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+      </svg>
+    </a>
+    <a href="detayli-rapor.html" class="sidebar-item" aria-label="Detaylı Rapor">
+      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+      </svg>
+    </a>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>Detaylı Rapor</h1>
+      <div class="date-range">13 Ağu 2025 - 6 Ekim 2025</div>
+    </div>
+
+   
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Total Sessions (Orders)</div>
+        <div class="metric-value" id="sessions">-</div>
+        <div class="metric-change" id="dsess">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Total Users (Cari)</div>
+        <div class="metric-value" id="users">-</div>
+        <div class="metric-change" id="duser">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Pageviews (Miktar)</div>
+        <div class="metric-value" id="pviews">-</div>
+        <div class="metric-change" id="dpv">-</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Revenue USD</div>
+        <div class="metric-value" id="rev">-</div>
+        <div class="metric-change" id="drev">-</div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+       <div class="chart-card">
+         <div class="chart-title">Projeler (Zamana Göre)</div>
+         <div id="daily-line"></div>
+       </div>
+       <div class="chart-card">
+         <div class="chart-title">Döviz Cinsi Bazında Toplam Kazanç</div>
+         <div id="source-pie"></div>
+       </div>
+     </div>
+ 
+     <div class="bottom-section">
+       <div class="chart-card">
+         <div class="chart-title">En Çok Sipariş Veren Müşteriler (Miktar)</div>
+         <div id="bar-cari"></div>
+       </div>
+        <div class="upload-section">
+      <h2>📊 Sipariş Verileri</h2>
+      <button class="load-btn" onclick="loadCSVData()">🔄 Verileri Yenile</button>
+      <div id="dataStatus">📥 Veriler yükleniyor...</div>
+    </div>
+     </div>
+     <div class="table-card">
+       <div class="chart-title">Sipariş Tablosu (Tüm Kolonlar)</div>
+       <div class="table-wrapper">
+         <table class="data-table" aria-label="Sipariş Tablosu">
+           <thead>
+             <tr>
+               <th>Sipariş Tarihi</th>
+               <th>Müşteri</th>
+               <th>SRM Kod</th>
+               <th>SRM Adı</th>
+               <th>Miktar</th>
+               <th>Teslim</th>
+               <th>Tutar</th>
+               <th>Net Tutar</th>
+               <th>Döviz</th>
+               <th>Kalan Miktar</th>
+               <th>Kalan Net</th>
+               <th>Proje</th>
+               <th>Durum</th>
+             </tr>
+           </thead>
+           <tbody id="ordersBody"></tbody>
+         </table>
+       </div>
+     </div>
+     
+  </div>
+  <script>
+    // Ensure Plotly is loaded and avoid 'Plotly is not defined' errors with CDN fallbacks
+    (function ensurePlotly(){
+      if (typeof window !== 'undefined' && typeof window.Plotly === 'undefined') {
+        const sources = [
+          'https://cdn.plot.ly/plotly-2.26.0.min.js',
+          'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.26.0/plotly.min.js',
+          'https://unpkg.com/plotly.js-dist-min@2.26.0/plotly.min.js'
+        ];
+        let i = 0;
+        const tryNext = () => {
+          if (i >= sources.length) return;
+          const s = document.createElement('script');
+          s.src = sources[i++];
+          s.async = true;
+          s.onload = () => console.log('Plotly loaded:', s.src);
+          s.onerror = () => { console.warn('Plotly load failed:', s.src); tryNext(); };
+          document.head.appendChild(s);
+        };
+        tryNext();
+        // Safety: define a no-op stub after 3s to prevent ReferenceError in rare cases
+        setTimeout(() => {
+          if (typeof window.Plotly === 'undefined') {
+            window.Plotly = { newPlot: () => console.warn('Plotly not available; chart rendering skipped.') };
+          }
+        }, 3000);
+      }
+    })();
+    
+    let prevData = null; // basit "önceki dönem" karşılaştırması için
+
+    
+
+
+    async function loadCSVData() {
+      const statusDiv = document.getElementById('dataStatus');
+      const currentTime = new Date().toLocaleTimeString('tr-TR');
+      statusDiv.innerHTML = '📥 Veriler API\'den yükleniyor...';
+      
+      try {
+        // Try to fetch from API first
+        const response = await fetch('/api/orders');
+        
+        if (!response.ok) {
+          throw new Error(`API hatası: ${response.status}`);
+        }
+        
+        const apiResponse = await response.json();
+        
+        if (!apiResponse.success) {
+          throw new Error(apiResponse.error || 'API\'den veri alınamadı');
+        }
+        
+        const jsonData = apiResponse.data;
+        
+        statusDiv.innerHTML = `✅ ${jsonData.length} sipariş API'den yüklendi (Son güncelleme: ${currentTime})`;
+        processData(jsonData);
+        
+      } catch (error) {
+        statusDiv.innerHTML = `❌ API Hatası: ${error.message} - Örnek veriler gösteriliyor`;
+        console.error('API yükleme hatası:', error);
+        
+        // Fallback to sample data if API fails
+        showSampleData();
+      }
+    }
+    
+    function showSampleData() {
+      const statusDiv = document.getElementById('dataStatus');
+      statusDiv.innerHTML = '⚠️ API erişimi başarısız - Örnek veriler gösteriliyor';
+      
+      // Yeni şemaya uygun örnek veriler
+      const sampleData = [
+        {
+          "tarih": "2025-08-29T00:00:00",
+          "cari": "DFN PROJE MÜHENDİSLİK DANIŞMANLIK TİCARET LİMİTED ŞİRKETİ",
+          "srmkod": "",
+          "srmad": "TANIMSIZ",
+          "miktar": 42,
+          "teslim": 0,
+          "tutar": 11665.2,
+          "nettutar": 11665.2,
+          "doviz": "USD",
+          "kalanmik": 42,
+          "kalannet": 11665.2,
+          "proje": "DFN KAHRAMANMARAŞ DEPREM KONUTLARI1.PART",
+          "durum": "Açık"
+        },
+        {
+          "tarih": "2025-08-30T00:00:00",
+          "cari": "DFN MALATYA 1262",
+          "srmkod": "",
+          "srmad": "DFN MALATYA",
+          "miktar": 10000,
+          "teslim": 0,
+          "tutar": 10000,
+          "nettutar": 10000,
+          "doviz": "TL",
+          "kalanmik": 10000,
+          "kalannet": 10000,
+          "proje": "DFN MALATYA 1262",
+          "durum": "Açık"
+        },
+        {
+          "tarih": "2025-08-31T00:00:00",
+          "cari": "ALBAYENT YILDIZ ENTE",
+          "srmkod": "",
+          "srmad": "ALBAYENT",
+          "miktar": 8200,
+          "teslim": 0,
+          "tutar": 8200,
+          "nettutar": 8200,
+          "doviz": "EUR",
+          "kalanmik": 8200,
+          "kalannet": 8200,
+          "proje": "ALBAYENT YILDIZ ENTE",
+          "durum": "Açık"
+        }
+      ];
+      
+      processData(sampleData);
+    }
+    
+    function parseCSV(csvText) {
+      const lines = csvText.trim().split('\n');
+      const headers = lines[0].split(',');
+      const data = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Skip empty lines and summary lines
+        if (!line || line.startsWith(',') || !line.includes(',')) {
+          continue;
+        }
+        
+        // Handle quoted values properly - split by comma but respect quotes
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim()); // Add the last value
+        
+        // Skip lines that don't have proper data structure
+        if (values.length < headers.length) {
+          continue;
+        }
+        
+        const row = {};
+        
+        headers.forEach((header, index) => {
+          let value = values[index] ? values[index].trim().replace(/"/g, '') : '';
+          
+          // Convert numeric fields with comma separators
+          if (header.includes('TUTAR') || header.includes('MİKTAR')) {
+            // Remove quotes and convert comma-separated numbers
+            value = value.replace(/"/g, '').replace(/,/g, '').replace(/\s+/g, '');
+            row[header.trim()] = parseFloat(value) || 0;
+          } else {
+            row[header.trim()] = value;
+          }
+        });
+        
+        // Only add rows with valid date and customer name, or summary rows with currency data
+        if ((row['SİPARİŞ TARİHİ'] && row['CARİ İSMİ']) || 
+            (row['DOVİZ CİNSİ'] && row['KALAN SİPARİŞ NET TUTAR'] && !row['SİPARİŞ TARİHİ'])) {
+          // For summary rows, add a fake date to make them processable
+          if (!row['SİPARİŞ TARİHİ'] && row['DOVİZ CİNSİ']) {
+            row['SİPARİŞ TARİHİ'] = '01.01.2025';
+            row['CARİ İSMİ'] = 'Özet';
+          }
+          data.push(row);
+        }
+      }
+      
+      return data;
+    }
+
+
+
+    function processData(raw){
+      // Yardımcılar
+      const num = (x)=>{
+        if (x === null || x === undefined) return 0;
+        if (typeof x === 'number') return x;
+        let s = String(x).replace(/\s+/g,'');
+        if (s.includes('.') && s.includes(',')) {
+          s = s.replace(/\./g,'').replace(',', '.');
+        } else {
+          s = s.replace(',', '.');
+        }
+        const v = parseFloat(s);
+        return isNaN(v) ? 0 : v;
+      };
+      const parseDate = (s)=>{
+        if (!s) return new Date();
+        const d = new Date(s);
+        if (!isNaN(d)) return d;
+        // DD.MM.YYYY
+        const m = String(s).split('.');
+        if (m.length === 3) {
+          const day = parseInt(m[0]), month = parseInt(m[1]) - 1, year = parseInt(m[2]);
+          const dd = new Date(year, month, day);
+          if (!isNaN(dd)) return dd;
+        }
+        // Excel serial
+        const ex = parseFloat(s);
+        if (!isNaN(ex) && ex > 25569) return new Date((ex - 25569) * 86400 * 1000);
+        return new Date();
+      };
+      const normalize = (arr)=> arr.map(r=>({
+        tarih: r.tarih ? r.tarih : (r['SİPARİŞ TARİHİ'] || ''),
+        cari: r.cari || r['CARİ İSMİ'] || '',
+        srmkod: r.srmkod || r['Sorumluluk Merkezi Kodu'] || '',
+        srmad: r.srmad || r['Sorumluluk Merkezi Adı'] || r.proje || '',
+        miktar: num(r.miktar ?? r['MİKTAR']),
+        teslim: num(r.teslim ?? r['TESLİM MİKTAR']),
+        tutar: num(r.tutar ?? r['SİPARİŞ SATIR TOPLAM TUTAR'] ?? r['TOPLAM TUTAR']),
+        nettutar: num(r.nettutar ?? r['SİPARİŞ SATIR NET TUTAR'] ?? r['NET TUTAR']),
+        doviz: r.doviz || r['DOVİZ CİNSİ'] || 'TL',
+        kalanmik: num(r.kalanmik ?? r['KALAN SİPARİŞ MİKTARI'] ?? r['MİKTAR']),
+        kalannet: num(r.kalannet ?? r['KALAN SİPARİŞ NET TUTAR'] ?? r['NET TUTAR']),
+        proje: r.proje || r['Sorumluluk Merkezi Adı'] || r.srmad || '',
+        durum: r.durum || ((num(r.kalanmik) > 0 || num(r.kalannet) > 0) ? 'Açık' : 'Kapalı')
+      }));
+
+      const now = normalize(raw);
+      if(!prevData) { prevData = JSON.parse(JSON.stringify(now)); }
+      const prev = prevData;
+
+      // KPI (USD geliri etiketi ile uyum için USD toplamı)
+      const kpi = (d)=>({
+        sessions: d.length,
+        users: new Set(d.map(r=>r.cari)).size,
+        pviews: d.reduce((s,r)=>s+(r.miktar||0),0),
+        rev: d.reduce((s,r)=>s+((r.doviz==='USD' ? (r.kalannet||0) : 0)),0)
+      });
+      const kNow = kpi(now), kPrev = kpi(prev);
+      const delta = (p,n)=>(p?(n-p)/p*100:0).toFixed(1);
+
+      document.getElementById('sessions').textContent = kNow.sessions.toLocaleString('tr-TR');
+      document.getElementById('dsess').textContent = `% ${delta(kPrev.sessions,kNow.sessions)} vs prev`;
+      document.getElementById('users').textContent = kNow.users.toLocaleString('tr-TR');
+      document.getElementById('duser').textContent = `% ${delta(kPrev.users,kNow.users)} vs prev`;
+      document.getElementById('pviews').textContent = kNow.pviews.toLocaleString('tr-TR');
+      document.getElementById('dpv').textContent = `% ${delta(kPrev.pviews,kNow.pviews)} vs prev`;
+      document.getElementById('rev').textContent = '$'+kNow.rev.toLocaleString('tr-TR', {minimumFractionDigits: 2});
+      document.getElementById('drev').textContent = `% ${delta(kPrev.rev,kNow.rev)} vs prev`;
+
+      // Date parse
+      now.forEach(r=>{ r.date = parseDate(r.tarih); });
+
+      // Proje-zaman çizgisi (kalannet ile)
+      const projects = {};
+      const allDates = new Set();
+      now.forEach(r=>{
+        const projectName = r.proje || 'Bilinmeyen Proje';
+        const dateStr = r.date.toISOString().slice(0,10);
+        allDates.add(dateStr);
+        if (!projects[projectName]) projects[projectName] = {};
+        projects[projectName][dateStr] = (projects[projectName][dateStr] || 0) + (r.kalannet || 0);
+      });
+      
+      // Convert to sorted array of dates
+      const sortedDates = Array.from(allDates).sort();
+      
+      // Get top 5 projects by total revenue
+      const projectTotals = Object.keys(projects).map(projectName => ({
+        name: projectName,
+        total: Object.values(projects[projectName]).reduce((sum, val) => sum + val, 0)
+      })).sort((a, b) => b.total - a.total).slice(0, 5);
+      
+      const projectTraces = projectTotals.map((project, index) => {
+        const projectName = project.name;
+        const gradientColors = [
+          ['#89b4fa', '#74c0fc'], // Blue gradient
+          ['#f38ba8', '#fcc2d7'], // Pink gradient
+          ['#a6e3a1', '#d9f7be'], // Green gradient
+          ['#fab387', '#ffd8a8'], // Orange gradient
+          ['#cba6f7', '#e4c7f5']  // Purple gradient
+        ];
+        
+        // Create daily revenue data for each project
+        const dailyData = sortedDates.map(date => {
+          return projects[projectName][date] || 0;
+        });
+        
+        const colorPair = gradientColors[index % gradientColors.length];
+        
+        return {
+          x: sortedDates,
+          y: dailyData,
+          type: 'bar',
+          name: projectName.length > 25 ? projectName.substring(0, 25) + '...' : projectName,
+          marker: {
+             color: dailyData.map((_, i) => {
+               // Create gradient effect by alternating between two colors
+               return i % 2 === 0 ? colorPair[0] : colorPair[1];
+             }),
+             opacity: 0.9,
+             line: {
+                color: colorPair[0],
+                width: 4
+              },
+             pattern: {
+               shape: '',
+               bgcolor: colorPair[1],
+               fgcolor: colorPair[0],
+               fgopacity: 0.3
+             }
+           },
+           width: 1.0,
+          hovertemplate: '<b style="color: ' + colorPair[0] + ';">%{fullData.name}</b><br>' +
+                        '<span style="color: #a6adc8;">📅 Tarih:</span> %{x}<br>' +
+                        '<span style="color: #a6adc8;">💰 Tutar:</span> <b style="color: #a6e3a1;">%{y:,.0f} TL</b><extra></extra>',
+          hoverlabel: {
+            bgcolor: '#1e1e2e',
+            bordercolor: colorPair[0],
+            font: {color: '#cdd6f4', size: 12}
+          }
+        };
+      });
+      
+      // Ensure Plotly is available before rendering charts
+      const renderCharts = () => {
+        if (typeof window.Plotly === 'undefined') {
+          console.warn('Plotly not loaded yet, retrying in 500ms...');
+          setTimeout(renderCharts, 500);
+          return;
+        }
+        
+        try {
+          Plotly.newPlot('daily-line', projectTraces, {
+        title: {
+          text: '',
+          font: {color: '#cdd6f4', size: 16, family: 'Inter, sans-serif'}
+        },
+        xaxis: {
+          title: {
+            text: '📅 Tarih',
+            font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'}
+          },
+          color: '#cdd6f4',
+          gridcolor: '#45475a',
+          gridwidth: 1,
+          showgrid: true,
+          type: 'date',
+          tickformat: '%d.%m.%Y',
+          tickfont: {color: '#a6adc8', size: 11},
+          linecolor: '#6c7086',
+          linewidth: 2,
+          mirror: true
+        },
+        yaxis: {
+          title: {
+            text: '💰 Günlük Tutar (TL)',
+            font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'}
+          },
+          color: '#cdd6f4',
+          gridcolor: '#45475a',
+          gridwidth: 1,
+          showgrid: true,
+          tickformat: ',.0f',
+          tickfont: {color: '#a6adc8', size: 11},
+          linecolor: '#6c7086',
+          linewidth: 2,
+          mirror: true,
+          zeroline: true,
+          zerolinecolor: '#6c7086',
+          zerolinewidth: 2
+        },
+        showlegend: true,
+        legend: {
+          font: {color: '#cdd6f4', size: 12, family: 'Inter, sans-serif'},
+          bgcolor: 'rgba(30, 30, 46, 0.8)',
+          bordercolor: '#6c7086',
+          borderwidth: 1,
+          orientation: 'v',
+          x: 1.02,
+          y: 1,
+          xanchor: 'left',
+          yanchor: 'top'
+        },
+        paper_bgcolor: '#181825',
+        plot_bgcolor: '#1e1e2e',
+        font: {color: '#cdd6f4', family: 'Inter, sans-serif'},
+        height: 380,
+        margin: {l: 80, r: 140, t: 50, b: 80},
+        hovermode: 'x unified',
+          barmode: 'group',
+          bargap: 0.01,
+          bargroupgap: 0.01,
+        transition: {
+          duration: 500,
+          easing: 'cubic-in-out'
+        }
+      }, {
+        displayModeBar: true,
+        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'autoScale2d'],
+        displaylogo: false,
+        responsive: true
+      });
+
+      // Currency-based revenue pie
+      const currencyRevenue = {};
+      now.forEach(r=>{ 
+        const currency = r.doviz || 'TL'; 
+        currencyRevenue[currency] = (currencyRevenue[currency]||0) + (r.kalannet||0); 
+      });
+      
+      const currencyLabels = Object.keys(currencyRevenue).map(currency => {
+        const amount = currencyRevenue[currency].toLocaleString('tr-TR', {minimumFractionDigits: 2});
+        return `${currency}: ${amount}`;
+      });
+      
+      Plotly.newPlot('source-pie', [{
+        values: Object.values(currencyRevenue),
+        labels: currencyLabels,
+        type: 'pie', 
+        hole: 0.4,
+        textinfo: 'label+percent',
+        textposition: 'outside',
+        marker: {colors: ['#89b4fa', '#f38ba8', '#a6e3a1', '#fab387', '#cba6f7']}
+      }], {
+        title: '',
+        height: 300,
+        margin: {l: 20, r: 20, t: 40, b: 20},
+        paper_bgcolor: '#181825',
+        plot_bgcolor: '#181825',
+        font: {color: '#a6adc8', size: 12}
+      });
+
+      // Top 10 customers by quantity
+      const customerQuantity = {};
+      now.forEach(r=>{ 
+        const customer = r.cari || 'Bilinmeyen Müşteri'; 
+        customerQuantity[customer] = (customerQuantity[customer]||0) + (r.miktar||0); 
+      });
+      const sortedByQuantity = Object.entries(customerQuantity).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      
+      Plotly.newPlot('bar-cari', [{
+        x: sortedByQuantity.map(s=>s[1]),
+        y: sortedByQuantity.map(s=>s[0].length > 25 ? s[0].substring(0,25)+'...' : s[0]),
+        type: 'bar', 
+        orientation: 'h',
+        text: sortedByQuantity.map(s=>s[1].toLocaleString('tr-TR')),
+        textposition: 'outside',
+        marker: {color: '#89b4fa'}
+      }], {
+        title: '',
+        xaxis: {
+          title: 'Toplam Miktar',
+          color: '#a6adc8',
+          gridcolor: '#313244',
+          showgrid: true
+        },
+        yaxis: {
+          title: '',
+          color: '#a6adc8',
+          gridcolor: '#313244',
+          showgrid: false
+        },
+        height: 300,
+        margin: {l: 180, r: 20, t: 40, b: 40},
+        paper_bgcolor: '#181825',
+        plot_bgcolor: '#181825',
+        font: {color: '#a6adc8'}
+      });
+      
+      } catch (error) {
+        console.error('Chart rendering error:', error);
+      }
+    };
+    
+    // Call renderCharts function
+    renderCharts();
+    }
+      
+      // Auto-load data when page loads
+      document.addEventListener('DOMContentLoaded', function() {
+        loadCSVData();
+      });
+      
+      // Fallback for window load event
+      window.addEventListener('load', function() {
+        // Only load if data hasn't been loaded yet
+        const statusDiv = document.getElementById('dataStatus');
+        if (statusDiv && statusDiv.innerHTML === '📥 Veriler yükleniyor...') {
+          loadCSVData();
+        }
+      });
+
+      // Hamburger menu functionality
+      document.addEventListener('DOMContentLoaded', function() {
+        const hamburgerBtn = document.getElementById('hamburgerBtn');
+        const sidebar = document.getElementById('siteSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        function toggleMenu() {
+          const isOpen = sidebar.classList.contains('open');
+          
+          if (isOpen) {
+            sidebar.classList.remove('open');
+            document.body.classList.remove('menu-open');
+            hamburgerBtn.setAttribute('aria-expanded', 'false');
+          } else {
+            sidebar.classList.add('open');
+            document.body.classList.add('menu-open');
+            hamburgerBtn.setAttribute('aria-expanded', 'true');
+          }
+        }
+
+        hamburgerBtn.addEventListener('click', toggleMenu);
+        overlay.addEventListener('click', toggleMenu);
+
+        // Close menu with Escape key
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+            toggleMenu();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

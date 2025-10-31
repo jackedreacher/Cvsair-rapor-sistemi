@@ -1,0 +1,17 @@
+{
+  "name": "cvsair-excel-converter",
+  "version": "1.0.0",
+  "description": "Excel to CSV converter for CVSAir dashboard",
+  "main": "excel-to-csv.js",
+  "scripts": {
+    "start": "node excel-to-csv.js",
+    "watch": "node file-watcher.js"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5",
+    "chokidar": "^3.5.3",
+    "fs-extra": "^11.1.1"
+  },
+  "author": "CVSAir",
+  "license": "MIT"
+}
