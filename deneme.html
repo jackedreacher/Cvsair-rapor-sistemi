@@ -369,22 +369,22 @@
 
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-label">Total Sessions (Orders)</div>
+        <div class="metric-label">Toplam Oturum (Sipariş)</div>
         <div class="metric-value" id="sessions">-</div>
         <div class="metric-change" id="dsess">-</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Total Users (Cari)</div>
+        <div class="metric-label">Toplam Kullanıcı (Cari)</div>
         <div class="metric-value" id="users">-</div>
         <div class="metric-change" id="duser">-</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Pageviews (Miktar)</div>
+        <div class="metric-label">Sayfa Görüntüleme (Miktar)</div>
         <div class="metric-value" id="pviews">-</div>
         <div class="metric-change" id="dpv">-</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Revenue USD</div>
+        <div class="metric-label">Gelir (USD)</div>
         <div class="metric-value" id="rev">-</div>
         <div class="metric-change" id="drev">-</div>
       </div>
@@ -691,13 +691,13 @@
       const delta = (p,n)=>(p?(n-p)/p*100:0).toFixed(1);
 
       document.getElementById('sessions').textContent = kNow.sessions.toLocaleString('tr-TR');
-      document.getElementById('dsess').textContent = `% ${delta(kPrev.sessions,kNow.sessions)} vs prev`;
+      document.getElementById('dsess').textContent = `% ${delta(kPrev.sessions,kNow.sessions)} önceki döneme göre`;
       document.getElementById('users').textContent = kNow.users.toLocaleString('tr-TR');
-      document.getElementById('duser').textContent = `% ${delta(kPrev.users,kNow.users)} vs prev`;
+      document.getElementById('duser').textContent = `% ${delta(kPrev.users,kNow.users)} önceki döneme göre`;
       document.getElementById('pviews').textContent = kNow.pviews.toLocaleString('tr-TR');
-      document.getElementById('dpv').textContent = `% ${delta(kPrev.pviews,kNow.pviews)} vs prev`;
+      document.getElementById('dpv').textContent = `% ${delta(kPrev.pviews,kNow.pviews)} önceki döneme göre`;
       document.getElementById('rev').textContent = '$'+kNow.rev.toLocaleString('tr-TR', {minimumFractionDigits: 2});
-      document.getElementById('drev').textContent = `% ${delta(kPrev.rev,kNow.rev)} vs prev`;
+      document.getElementById('drev').textContent = `% ${delta(kPrev.rev,kNow.rev)} önceki döneme göre`;
 
       // Date parse
       now.forEach(r=>{ r.date = parseDate(r.tarih); });
