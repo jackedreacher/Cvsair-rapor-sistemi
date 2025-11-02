@@ -329,9 +329,9 @@
       /* Menü açıkken hamburger menünün üzerinde kalsın */
       body.menu-open .hamburger-btn { left: 16px; }
       .main-content { margin-left: 0; }
-      /* Başlık yazısı hamburger ile çakışmasın, mobilde başlık üstte; tarih+logo altta */
-      .header { padding-left: calc(44px + 24px); flex-direction: column; align-items: flex-start; gap: 12px; }
-      .header-right { width: 100%; justify-content: space-between; }
+      /* Mobile: keep logo on the right of the title */
+      .header { padding-left: calc(44px + 24px); flex-direction: row; align-items: flex-start; gap: 12px; }
+      .header-right { width: auto; margin-left: auto; }
       .date-range { white-space: nowrap; padding: 8px 12px; font-size: 13px; }
       .logo-topright { height: 24px; padding: 3px 5px; }
       .table-container { max-height: 60vh; }
@@ -528,6 +528,38 @@
         }, 3000);
       }
     })();
+    // Fast timeout + retry + localStorage cache helpers
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
+        return res;
+      } finally { clearTimeout(id); }
+    }
+    async function retryFetch(url, options = {}, retries = 1, timeoutMs = 7000) {
+      let attempt = 0, lastErr;
+      while (attempt <= retries) {
+        try { return await fetchWithTimeout(url, options, timeoutMs); }
+        catch (err) { lastErr = err; attempt++; await new Promise(r => setTimeout(r, 400 * attempt)); }
+      }
+      throw lastErr;
+    }
+    const ORDERS_CACHE_KEY = 'ordersCache_v1';
+    function readOrdersCache() {
+      try {
+        const raw = localStorage.getItem(ORDERS_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.data)) return null;
+        return parsed.data;
+      } catch { return null; }
+    }
+    function writeOrdersCache(dataArray) {
+      try {
+        localStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: dataArray }));
+      } catch {}
+    }
     let allData = [];
     let filteredData = [];
     let currentPage = 1;
@@ -542,9 +574,22 @@
     });
 
     async function loadData() {
+      // Show cached data immediately, if available
+      const cached = readOrdersCache();
+      if (cached && cached.length) {
+        allData = cached.map(row => {
+          const d = row.date ? new Date(row.date) : (row.tarih ? new Date(row.tarih) : new Date());
+          return { ...row, tarih: (d instanceof Date ? d.toISOString() : new Date().toISOString()), date: d };
+        });
+        filteredData = [...allData];
+        updateStats();
+        renderTable();
+        renderPagination();
+        console.log(`⚡️ Önbellekten ${allData.length} sipariş yüklendi`);
+      }
       try {
-        // Try to fetch from API first
-        const response = await fetch('/api/orders');
+        // Try to fetch from API first (fast timeout + one retry)
+        const response = await retryFetch('/api/orders', {}, 1, 7000);
         
         if (!response.ok) {
           throw new Error(`API hatası: ${response.status}`);
@@ -616,6 +661,8 @@
           };
         };
         allData = (apiResponse.data || []).map(normalize);
+        // Persist normalized data
+        writeOrdersCache(allData);
         
         filteredData = [...allData];
         updateStats();
@@ -626,6 +673,10 @@
         
       } catch (error) {
         console.error('API yükleme hatası:', error);
+        if (cached && cached.length) {
+          console.warn('API hatası nedeniyle önbellek kullanılıyor');
+          return; // UI is already rendered from cache above
+        }
         
         // Fallback to CSV data if API fails and normalize to new schema
         const fallback = await getSampleData();
@@ -691,8 +742,10 @@
         updateStats();
         renderTable();
         renderPagination();
+        // Persist fallback to cache to improve next load
+        writeOrdersCache(allData);
         
-        console.warn('API hatası nedeniyle CSV verileri kullanılıyor');
+        console.warn('API hatası nedeniyle CSV/örnek verileri kullanılıyor');
       }
     }
 

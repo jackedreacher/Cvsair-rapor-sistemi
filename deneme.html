@@ -486,6 +486,39 @@
       }
     })();
     
+    // Fast timeout + retry + localStorage cache helpers
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
+        return res;
+      } finally { clearTimeout(id); }
+    }
+    async function retryFetch(url, options = {}, retries = 1, timeoutMs = 7000) {
+      let attempt = 0, lastErr;
+      while (attempt <= retries) {
+        try { return await fetchWithTimeout(url, options, timeoutMs); }
+        catch (err) { lastErr = err; attempt++; await new Promise(r => setTimeout(r, 400 * attempt)); }
+      }
+      throw lastErr;
+    }
+    const ORDERS_CACHE_KEY = 'ordersCache_v1';
+    function readOrdersCache() {
+      try {
+        const raw = localStorage.getItem(ORDERS_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.data)) return null;
+        return parsed.data;
+      } catch { return null; }
+    }
+    function writeOrdersCache(dataArray) {
+      try {
+        localStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: dataArray }));
+      } catch {}
+    }
+    
     let prevData = null; // basit "önceki dönem" karşılaştırması için
 
     
@@ -496,9 +529,16 @@
       const currentTime = new Date().toLocaleTimeString('tr-TR');
       statusDiv.innerHTML = '📥 Veriler API\'den yükleniyor...';
       
+      // Show cached data immediately, if available
+      const cached = readOrdersCache();
+      if (cached && cached.length) {
+        statusDiv.innerHTML = `⚡️ Önbellekten ${cached.length} sipariş yüklendi (Son güncelleme: ${currentTime})`;
+        processData(cached);
+      }
+      
       try {
-        // Try to fetch from API first
-        const response = await fetch('/api/orders');
+        // Try to fetch from API first (fast timeout + one retry)
+        const response = await retryFetch('/api/orders', {}, 1, 7000);
         
         if (!response.ok) {
           throw new Error(`API hatası: ${response.status}`);
@@ -511,13 +551,20 @@
         }
         
         const jsonData = apiResponse.data;
+        // Persist raw data to cache
+        writeOrdersCache(jsonData);
         
         statusDiv.innerHTML = `✅ ${jsonData.length} sipariş API'den yüklendi (Son güncelleme: ${currentTime})`;
         processData(jsonData);
         
       } catch (error) {
-        statusDiv.innerHTML = `❌ API Hatası: ${error.message} - Örnek veriler gösteriliyor`;
         console.error('API yükleme hatası:', error);
+        if (cached && cached.length) {
+          statusDiv.innerHTML = `⚠️ API Hatası: ${error.message} - Önbellek verileri gösteriliyor`;
+          processData(cached);
+          return;
+        }
+        statusDiv.innerHTML = `❌ API Hatası: ${error.message} - Örnek veriler gösteriliyor`;
         
         // Fallback to sample data if API fails
         showSampleData();
