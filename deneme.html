@@ -496,8 +496,9 @@
 
     // IndexedDB helpers for persistent caching
     const IDB_NAME = 'cvsair-db';
-    const IDB_VERSION = 1;
+    const IDB_VERSION = 2; // günlük snapshotlar için v2
     const IDB_STORE_ORDERS = 'orders';
+    const IDB_STORE_DAYS = 'days';
 
     function idbOpen() {
       return new Promise((resolve, reject) => {
@@ -506,6 +507,9 @@
           const db = req.result;
           if (!db.objectStoreNames.contains(IDB_STORE_ORDERS)) {
             db.createObjectStore(IDB_STORE_ORDERS, { keyPath: 'key' });
+          }
+          if (!db.objectStoreNames.contains(IDB_STORE_DAYS)) {
+            db.createObjectStore(IDB_STORE_DAYS, { keyPath: 'key' });
           }
         };
         req.onsuccess = () => resolve(req.result);
@@ -542,6 +546,39 @@
         });
       } catch (e) {
         console.warn('IndexedDB write error', e);
+        return false;
+      }
+    }
+
+    async function idbGetDay(dayKey) {
+      try {
+        const db = await idbOpen();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE_DAYS, 'readonly');
+          const store = tx.objectStore(IDB_STORE_DAYS);
+          const req = store.get(dayKey);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+      } catch (e) {
+        console.warn('IndexedDB read error (days)', e);
+        return null;
+      }
+    }
+
+    async function idbPutDay(dayKey, snapshot) {
+      try {
+        const db = await idbOpen();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE_DAYS, 'readwrite');
+          const store = tx.objectStore(IDB_STORE_DAYS);
+          const payload = { key: dayKey, ...snapshot, updatedAt: Date.now() };
+          const req = store.put(payload);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      } catch (e) {
+        console.warn('IndexedDB write error (days)', e);
         return false;
       }
     }
@@ -774,21 +811,34 @@
         if (!isNaN(ex) && ex > 25569) return new Date((ex - 25569) * 86400 * 1000);
         return new Date();
       };
-      const normalize = (arr)=> arr.map(r=>({
-        tarih: r.tarih ? r.tarih : (r['SİPARİŞ TARİHİ'] || ''),
-        cari: r.cari || r['CARİ İSMİ'] || '',
-        srmkod: r.srmkod || r['Sorumluluk Merkezi Kodu'] || '',
-        srmad: r.srmad || r['Sorumluluk Merkezi Adı'] || r.proje || '',
-        miktar: num(r.miktar ?? r['MİKTAR']),
-        teslim: num(r.teslim ?? r['TESLİM MİKTAR']),
-        tutar: num(r.tutar ?? r['SİPARİŞ SATIR TOPLAM TUTAR'] ?? r['TOPLAM TUTAR']),
-        nettutar: num(r.nettutar ?? r['SİPARİŞ SATIR NET TUTAR'] ?? r['NET TUTAR']),
-        doviz: r.doviz || r['DOVİZ CİNSİ'] || 'TL',
-        kalanmik: num(r.kalanmik ?? r['KALAN SİPARİŞ MİKTARI'] ?? r['MİKTAR']),
-        kalannet: num(r.kalannet ?? r['KALAN SİPARİŞ NET TUTAR'] ?? r['NET TUTAR']),
-        proje: r.proje || r['Sorumluluk Merkezi Adı'] || r.srmad || '',
-        durum: r.durum || ((num(r.kalanmik) > 0 || num(r.kalannet) > 0) ? 'Açık' : 'Kapalı')
-      }));
+      const normalize = (arr)=> arr.map(r=>{
+        const clean = (s)=>String(s||'').trim();
+        const isUnknown = (s)=>{ const t = clean(s).toLowerCase(); return !t || t === 'tanımsız' || t.startsWith('bilinmeyen'); };
+        // Proje adı için zengin aday listesi (API: proje_ad / proje_adi dahil)
+        const projectCandidates = [
+          r.proje, r['PROJE'], r['Proje'], r['project'], r['proje_ad'], r['proje_adi'],
+          r['Sorumluluk Merkezi Adı'], r.srmad, r.cari
+        ];
+        let resolvedProject = '';
+        for (const c of projectCandidates) { if (!isUnknown(c)) { resolvedProject = clean(c); break; } }
+        return {
+          tarih: r.tarih ? r.tarih : (r['SİPARİŞ TARİHİ'] || ''),
+          cari: clean(r.cari || r['CARİ İSMİ'] || ''),
+          srmkod: clean(r.srmkod || r['Sorumluluk Merkezi Kodu'] || ''),
+          // SRM adı: proje fallback kaldırıldı, gerçek SRM alanlarına öncelik verildi
+          srmad: clean(r.srmad || r['Sorumluluk Merkezi Adı'] || r['Sorumluluk Merkezi'] || ''),
+          miktar: num(r.miktar ?? r['MİKTAR']),
+          teslim: num(r.teslim ?? r['TESLİM MİKTAR']),
+          tutar: num(r.tutar ?? r['SİPARİŞ SATIR TOPLAM TUTAR'] ?? r['TOPLAM TUTAR']),
+          nettutar: num(r.nettutar ?? r['SİPARİŞ SATIR NET TUTAR'] ?? r['NET TUTAR']),
+          doviz: clean(r.doviz || r['DOVİZ CİNSİ'] || 'TL').toUpperCase(),
+          kalanmik: num(r.kalanmik ?? r['KALAN SİPARİŞ MİKTARI'] ?? r['MİKTAR']),
+          kalannet: num(r.kalannet ?? r['KALAN SİPARİŞ NET TUTAR'] ?? r['NET TUTAR']),
+          // Proje adı: TANIMSIZ ise SRM/cari fallback; en azından anlamlı bir etiket üret
+          proje: resolvedProject,
+          durum: clean(r.durum || ((num(r.kalanmik) > 0 || num(r.kalannet) > 0) ? 'Açık' : 'Kapalı'))
+        };
+      });
 
       const now = normalize(raw);
       if(!prevData) { prevData = JSON.parse(JSON.stringify(now)); }
@@ -801,26 +851,76 @@
         pviews: d.reduce((s,r)=>s+(r.miktar||0),0),
         rev: d.reduce((s,r)=>s+((r.doviz==='USD' ? (r.kalannet||0) : 0)),0)
       });
-      const kNow = kpi(now), kPrev = kpi(prev);
-      const delta = (p,n)=>(p?(n-p)/p*100:0).toFixed(1);
+      // Kalıcı baz değer ile delta hesaplama (toplamaya göre ekle/çıkar ve baz değeri güncelle)
+      const KPI_PREV_KEY = 'kpi_prev_v1';
+      const readPrevKpi = () => {
+        try { const raw = localStorage.getItem(KPI_PREV_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; }
+      };
+      const writePrevKpi = (obj) => {
+        try { localStorage.setItem(KPI_PREV_KEY, JSON.stringify({ ...obj, ts: Date.now() })); } catch {}
+      };
+
+      const kNow = kpi(now);
+      const prevKpi = readPrevKpi() || kNow;
+      const fmtAbs = (n)=> (n>=0?'+':'') + (Math.round(n)).toLocaleString('tr-TR');
+      const dSessAbs = kNow.sessions - prevKpi.sessions;
+      const dUserAbs = kNow.users - prevKpi.users;
+      const dPviewsAbs = kNow.pviews - prevKpi.pviews;
+      const dRevAbs = kNow.rev - prevKpi.rev;
+      const dSessPct = prevKpi.sessions ? (dSessAbs/prevKpi.sessions*100) : 0;
+      const dUserPct = prevKpi.users ? (dUserAbs/prevKpi.users*100) : 0;
+      const dPviewsPct = prevKpi.pviews ? (dPviewsAbs/prevKpi.pviews*100) : 0;
+      const dRevPct = prevKpi.rev ? (dRevAbs/prevKpi.rev*100) : 0;
 
       document.getElementById('sessions').textContent = kNow.sessions.toLocaleString('tr-TR');
-      document.getElementById('dsess').textContent = `% ${delta(kPrev.sessions,kNow.sessions)} önceki döneme göre`;
+      document.getElementById('dsess').textContent = `${fmtAbs(dSessAbs)} (${dSessPct.toFixed(1)}%) önceki değere göre`;
       document.getElementById('users').textContent = kNow.users.toLocaleString('tr-TR');
-      document.getElementById('duser').textContent = `% ${delta(kPrev.users,kNow.users)} önceki döneme göre`;
+      document.getElementById('duser').textContent = `${fmtAbs(dUserAbs)} (${dUserPct.toFixed(1)}%) önceki değere göre`;
       document.getElementById('pviews').textContent = kNow.pviews.toLocaleString('tr-TR');
-      document.getElementById('dpv').textContent = `% ${delta(kPrev.pviews,kNow.pviews)} önceki döneme göre`;
+      document.getElementById('dpv').textContent = `${fmtAbs(dPviewsAbs)} (${dPviewsPct.toFixed(1)}%) önceki değere göre`;
       document.getElementById('rev').textContent = '$'+kNow.rev.toLocaleString('tr-TR', {minimumFractionDigits: 2});
-      document.getElementById('drev').textContent = `% ${delta(kPrev.rev,kNow.rev)} önceki döneme göre`;
+      document.getElementById('drev').textContent = `${dRevAbs>=0?'+':''}$${Math.abs(dRevAbs).toLocaleString('tr-TR', {minimumFractionDigits: 2})} (${dRevPct.toFixed(1)}%) önceki değere göre`;
+
+      // Bazı yeni değerle güncelle (veriler silinmeden kümülatif mantık)
+      writePrevKpi(kNow);
 
       // Date parse
       now.forEach(r=>{ r.date = parseDate(r.tarih); });
+
+      // Günlük toplamlar (nettutar, döviz bazında) ve snapshot yazımı
+      (async ()=>{
+        try {
+          const dayTotals = new Map();
+          let maxDate = null;
+          now.forEach(r => {
+            const d = r.date instanceof Date ? r.date : new Date(r.date);
+            if (isNaN(d)) return;
+            const dayKey = d.toISOString().slice(0,10);
+            const cur = (r.doviz || 'TL').toUpperCase();
+            const val = Number(r.nettutar) || 0;
+            if (!dayTotals.has(dayKey)) dayTotals.set(dayKey, { count:0, byCurrency:{TL:0, USD:0, EUR:0} });
+            const dt = dayTotals.get(dayKey); dt.count += 1; dt.byCurrency[cur] = (dt.byCurrency[cur]||0) + val;
+            if (!maxDate || d > maxDate) maxDate = d;
+          });
+          if (!maxDate) return;
+          const latestKey = maxDate.toISOString().slice(0,10);
+          const prevDate = new Date(maxDate); prevDate.setDate(prevDate.getDate()-1);
+          const prevKey = prevDate.toISOString().slice(0,10);
+          const latestTotals = dayTotals.get(latestKey);
+          if (latestTotals) { await idbPutDay(latestKey, { count: latestTotals.count, byCurrency: latestTotals.byCurrency }); }
+          const prevTotals = dayTotals.get(prevKey);
+          if (prevTotals) {
+            const existingPrev = await idbGetDay(prevKey);
+            if (!existingPrev) { await idbPutDay(prevKey, { count: prevTotals.count, byCurrency: prevTotals.byCurrency }); }
+          }
+        } catch (e) { console.warn('Günlük snapshot yazma hatası', e); }
+      })();
 
       // Proje-zaman çizgisi (kalannet ile)
       const projects = {};
       const allDates = new Set();
       now.forEach(r=>{
-        const projectName = r.proje || 'Bilinmeyen Proje';
+        const projectName = (r.proje && r.proje.toLowerCase() !== 'tanımsız') ? r.proje : (r.srmad && r.srmad.toLowerCase() !== 'tanımsız') ? r.srmad : (r.cari || 'Bilinmeyen Proje');
         const dateStr = r.date.toISOString().slice(0,10);
         allDates.add(dateStr);
         if (!projects[projectName]) projects[projectName] = {};

@@ -138,12 +138,17 @@
 
     // IndexedDB kalıcı cache
     const IDB_NAME = 'cvsair-db';
-    const IDB_VERSION = 1;
+    const IDB_VERSION = 2; // günlük snapshotlar için v2
     const IDB_STORE_ORDERS = 'orders';
+    const IDB_STORE_DAYS = 'days';
     function idbOpen(){
       return new Promise((resolve, reject) => {
         const req = indexedDB.open(IDB_NAME, IDB_VERSION);
-        req.onupgradeneeded = () => { const db = req.result; if (!db.objectStoreNames.contains(IDB_STORE_ORDERS)) db.createObjectStore(IDB_STORE_ORDERS, { keyPath: 'key' }); };
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(IDB_STORE_ORDERS)) db.createObjectStore(IDB_STORE_ORDERS, { keyPath: 'key' });
+          if (!db.objectStoreNames.contains(IDB_STORE_DAYS)) db.createObjectStore(IDB_STORE_DAYS, { keyPath: 'key' });
+        };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
@@ -155,6 +160,14 @@
     async function idbPutLatest(data){
       try { const db = await idbOpen(); return await new Promise((resolve, reject) => { const tx = db.transaction(IDB_STORE_ORDERS, 'readwrite'); const st = tx.objectStore(IDB_STORE_ORDERS); const payload = { key:'latest', data, updatedAt: Date.now() }; const req = st.put(payload); req.onsuccess = () => resolve(true); req.onerror = () => reject(req.error); }); }
       catch(e){ console.warn('IDB write error', e); return false; }
+    }
+    async function idbGetDay(dayKey){
+      try { const db = await idbOpen(); return await new Promise((resolve, reject) => { const tx = db.transaction(IDB_STORE_DAYS, 'readonly'); const st = tx.objectStore(IDB_STORE_DAYS); const req = st.get(dayKey); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
+      catch(e){ console.warn('IDB read error (days)', e); return null; }
+    }
+    async function idbPutDay(dayKey, snapshot){
+      try { const db = await idbOpen(); return await new Promise((resolve, reject) => { const tx = db.transaction(IDB_STORE_DAYS, 'readwrite'); const st = tx.objectStore(IDB_STORE_DAYS); const payload = { key: dayKey, ...snapshot, updatedAt: Date.now() }; const req = st.put(payload); req.onsuccess = () => resolve(true); req.onerror = () => reject(req.error); }); }
+      catch(e){ console.warn('IDB write error (days)', e); return false; }
     }
     async function ensurePersistence(){
       if (navigator.storage && navigator.storage.persist) {
@@ -240,6 +253,23 @@
       document.getElementById('dailyPrevTL').textContent = '₺ ' + fmtMoney(prevTL);
       document.getElementById('dailyDeltaTL').textContent = (dDelta >= 0 ? '+₺ ' : '₺ ') + fmtMoney(dDelta);
       const dPctEl = document.getElementById('dailyDeltaTLPct'); dPctEl.textContent = `${(dPct).toFixed(1)}%`; dPctEl.className = 'delta ' + (dDelta >= 0 ? 'up' : 'down');
+
+      // Günlük snapshotları IndexedDB 'days' store'a yaz
+      (async ()=>{
+        try {
+          const latestTotals = dayTotals.get(latestKey);
+          if (latestTotals) {
+            await idbPutDay(latestKey, { count: latestTotals.count, byCurrency: latestTotals.byCurrency });
+          }
+          const prevTotals = dayTotals.get(prevKey);
+          if (prevTotals) {
+            const existingPrev = await idbGetDay(prevKey);
+            if (!existingPrev) {
+              await idbPutDay(prevKey, { count: prevTotals.count, byCurrency: prevTotals.byCurrency });
+            }
+          }
+        } catch (e) { console.warn('Günlük snapshot yazma hatası', e); }
+      })();
 
       // Aylık karşılaştırma (TL)
       const nowMonthKey = ym(maxDate);

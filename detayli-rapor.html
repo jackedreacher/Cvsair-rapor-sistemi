@@ -560,6 +560,94 @@
         localStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: dataArray }));
       } catch {}
     }
+    // IndexedDB kurulum (kalıcı cache ve günlük snapshotlar için)
+    const IDB_NAME = 'cvsair-db';
+    const IDB_VERSION = 2; // 'days' store ile v2
+    const IDB_STORE_ORDERS = 'orders';
+    const IDB_STORE_DAYS = 'days';
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(IDB_STORE_ORDERS)) {
+            db.createObjectStore(IDB_STORE_ORDERS, { keyPath: 'key' });
+          }
+          if (!db.objectStoreNames.contains(IDB_STORE_DAYS)) {
+            db.createObjectStore(IDB_STORE_DAYS, { keyPath: 'key' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function ensurePersistence() {
+      if (navigator.storage && navigator.storage.persist) {
+        try {
+          const persisted = await navigator.storage.persisted();
+          if (!persisted) { await navigator.storage.persist().catch(()=>{}); }
+        } catch {}
+      }
+    }
+    // Ortak normalizasyon yardımcıları (cache, API ve CSV için tek tip şema)
+    function num(v) {
+      if (v === null || v === undefined) return 0;
+      if (typeof v === 'number') return v;
+      const s = String(v).replace(/"/g, '').replace(/,/g, '').trim();
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+    function parseDate(v) {
+      if (!v) return null;
+      if (v instanceof Date) return v;
+      if (typeof v === 'number') {
+        if (v > 25569) return new Date((v - 25569) * 86400 * 1000);
+        return new Date(v);
+      }
+      const s = String(v);
+      const iso = new Date(s);
+      if (!isNaN(iso.getTime())) return iso;
+      const parts = s.split('.');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        return new Date(y, m, d);
+      }
+      return null;
+    }
+    function normalize(row) {
+      const tarihRaw = row.tarih ?? row['SİPARİŞ TARİHİ'] ?? row.date;
+      const miktarRaw = row.miktar ?? row['MİKTAR'];
+      const kalanRaw = row.kalanmik ?? row['KALAN MİKTAR'];
+      const nettutarRaw = row.nettutar ?? row['SİPARİŞ NET TUTAR'] ?? row['KALAN SİPARİŞ NET TUTAR'];
+      const tutarRaw = row.tutar ?? row['SİPARİŞ BRÜT TUTAR'] ?? nettutarRaw;
+      const teslimCalc = (num(miktarRaw) - num(kalanRaw));
+      const projRaw = row.proje ?? row['PROJE'] ?? row['Sorumluluk Merkezi Adı'] ?? row['Proje'];
+      const srmkodRaw = row['Sorumluluk Merkezi'] ?? row.srmkod ?? row['Sorumluluk Merkezi Kodu'] ?? '';
+      const srmadRaw = row['Sorumluluk Merkezi Adı'] ?? row.srmad ?? '';
+      const dovizRaw = row.doviz ?? row['DOVİZ CİNSİ'] ?? 'TL';
+      const cariRaw = row.cari ?? row['CARİ İSMİ'] ?? row['Cari'] ?? '';
+      const kalannetRaw = row.kalannet ?? row['KALAN SİPARİŞ NET TUTAR'] ?? nettutarRaw;
+      const durumRaw = row.durum ?? (num(kalanRaw) > 0 ? 'Açık' : 'Kapalı');
+      const d = parseDate(tarihRaw) || new Date();
+      return {
+        tarih: d.toISOString(),
+        date: d,
+        cari: String(cariRaw || '').trim(),
+        srmkod: String(srmkodRaw || '').trim(),
+        srmad: String(srmadRaw || '').trim(),
+        miktar: num(miktarRaw),
+        teslim: teslimCalc < 0 ? 0 : teslimCalc,
+        tutar: num(tutarRaw),
+        nettutar: num(nettutarRaw),
+        doviz: String(dovizRaw || 'TL').trim(),
+        kalanmik: num(kalanRaw),
+        kalannet: num(kalannetRaw),
+        proje: String(projRaw || '').trim(),
+        durum: String(durumRaw || '').trim()
+      };
+    }
     let allData = [];
     let filteredData = [];
     let currentPage = 1;
@@ -569,6 +657,7 @@
 
     // Sayfa yüklendiğinde verileri al
     document.addEventListener('DOMContentLoaded', function() {
+      ensurePersistence();
       loadData();
       initColumnVisibility();
     });
@@ -577,10 +666,8 @@
       // Show cached data immediately, if available
       const cached = readOrdersCache();
       if (cached && cached.length) {
-        allData = cached.map(row => {
-          const d = row.date ? new Date(row.date) : (row.tarih ? new Date(row.tarih) : new Date());
-          return { ...row, tarih: (d instanceof Date ? d.toISOString() : new Date().toISOString()), date: d };
-        });
+        // Cache'ten okunan verileri de normalize ederek tam şemaya çevir
+        allData = cached.map(normalize);
         filteredData = [...allData];
         updateStats();
         renderTable();
@@ -602,64 +689,6 @@
         }
         
         // Normalize to new schema
-        const normalize = (row) => {
-          const num = (v) => {
-            if (v === null || v === undefined) return 0;
-            if (typeof v === 'number') return v;
-            const s = String(v).replace(/"/g, '').replace(/,/g, '').trim();
-            const n = parseFloat(s);
-            return isNaN(n) ? 0 : n;
-          };
-          const parseDate = (v) => {
-            if (!v) return null;
-            if (v instanceof Date) return v;
-            if (typeof v === 'number') {
-              if (v > 25569) return new Date((v - 25569) * 86400 * 1000);
-              return new Date(v);
-            }
-            const s = String(v);
-            const iso = new Date(s);
-            if (!isNaN(iso.getTime())) return iso;
-            const parts = s.split('.');
-            if (parts.length === 3) {
-              const d = parseInt(parts[0], 10);
-              const m = parseInt(parts[1], 10) - 1;
-              const y = parseInt(parts[2], 10);
-              return new Date(y, m, d);
-            }
-            return null;
-          };
-          const tarihRaw = row.tarih ?? row['SİPARİŞ TARİHİ'] ?? row.date;
-          const miktarRaw = row.miktar ?? row['MİKTAR'];
-          const kalanRaw = row.kalanmik ?? row['KALAN MİKTAR'];
-          const nettutarRaw = row.nettutar ?? row['SİPARİŞ NET TUTAR'] ?? row['KALAN SİPARİŞ NET TUTAR'];
-          const tutarRaw = row.tutar ?? row['SİPARİŞ BRÜT TUTAR'] ?? nettutarRaw;
-          const teslimCalc = (num(miktarRaw) - num(kalanRaw));
-          const projRaw = row.proje ?? row['PROJE'] ?? row['Sorumluluk Merkezi Adı'] ?? row['Proje'];
-          const srmkodRaw = row['Sorumluluk Merkezi'] ?? row.srmkod ?? row['Sorumluluk Merkezi Kodu'] ?? '';
-          const srmadRaw = row['Sorumluluk Merkezi Adı'] ?? row.srmad ?? '';
-          const dovizRaw = row.doviz ?? row['DOVİZ CİNSİ'] ?? 'TL';
-          const cariRaw = row.cari ?? row['CARİ İSMİ'] ?? row['Cari'] ?? '';
-          const kalannetRaw = row.kalannet ?? row['KALAN SİPARİŞ NET TUTAR'] ?? nettutarRaw;
-          const durumRaw = row.durum ?? (num(kalanRaw) > 0 ? 'Açık' : 'Kapalı');
-          const d = parseDate(tarihRaw) || new Date();
-          return {
-            tarih: d.toISOString(),
-            date: d,
-            cari: String(cariRaw || '').trim(),
-            srmkod: String(srmkodRaw || '').trim(),
-            srmad: String(srmadRaw || '').trim(),
-            miktar: num(miktarRaw),
-            teslim: teslimCalc < 0 ? 0 : teslimCalc,
-            tutar: num(tutarRaw),
-            nettutar: num(nettutarRaw),
-            doviz: String(dovizRaw || 'TL').trim(),
-            kalanmik: num(kalanRaw),
-            kalannet: num(kalannetRaw),
-            proje: String(projRaw || '').trim(),
-            durum: String(durumRaw || '').trim()
-          };
-        };
         allData = (apiResponse.data || []).map(normalize);
         // Persist normalized data
         writeOrdersCache(allData);
@@ -680,64 +709,7 @@
         
         // Fallback to CSV data if API fails and normalize to new schema
         const fallback = await getSampleData();
-        const num = (v) => {
-          if (v === null || v === undefined) return 0;
-          if (typeof v === 'number') return v;
-          const s = String(v).replace(/"/g, '').replace(/,/g, '').trim();
-          const n = parseFloat(s);
-          return isNaN(n) ? 0 : n;
-        };
-        const parseDate = (v) => {
-          if (!v) return null;
-          if (v instanceof Date) return v;
-          if (typeof v === 'number') {
-            if (v > 25569) return new Date((v - 25569) * 86400 * 1000);
-            return new Date(v);
-          }
-          const s = String(v);
-          const iso = new Date(s);
-          if (!isNaN(iso.getTime())) return iso;
-          const parts = s.split('.');
-          if (parts.length === 3) {
-            const d = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10) - 1;
-            const y = parseInt(parts[2], 10);
-            return new Date(y, m, d);
-          }
-          return null;
-        };
-        allData = (fallback || []).map(row => {
-          const tarihRaw = row.tarih ?? row['SİPARİŞ TARİHİ'] ?? row.date;
-          const miktarRaw = row.miktar ?? row['MİKTAR'];
-          const kalanRaw = row.kalanmik ?? row['KALAN MİKTAR'];
-          const nettutarRaw = row.nettutar ?? row['SİPARİŞ NET TUTAR'] ?? row['KALAN SİPARİŞ NET TUTAR'];
-          const tutarRaw = row.tutar ?? row['SİPARİŞ BRÜT TUTAR'] ?? nettutarRaw;
-          const teslimCalc = (num(miktarRaw) - num(kalanRaw));
-          const projRaw = row.proje ?? row['PROJE'] ?? row['Sorumluluk Merkezi Adı'] ?? row['Proje'];
-          const srmkodRaw = row['Sorumluluk Merkezi'] ?? row.srmkod ?? row['Sorumluluk Merkezi Kodu'] ?? '';
-          const srmadRaw = row['Sorumluluk Merkezi Adı'] ?? row.srmad ?? '';
-          const dovizRaw = row.doviz ?? row['DOVİZ CİNSİ'] ?? 'TL';
-          const cariRaw = row.cari ?? row['CARİ İSMİ'] ?? row['Cari'] ?? '';
-          const kalannetRaw = row.kalannet ?? row['KALAN SİPARİŞ NET TUTAR'] ?? nettutarRaw;
-          const durumRaw = row.durum ?? (num(kalanRaw) > 0 ? 'Açık' : 'Kapalı');
-          const d = parseDate(tarihRaw) || new Date();
-          return {
-            tarih: d.toISOString(),
-            date: d,
-            cari: String(cariRaw || '').trim(),
-            srmkod: String(srmkodRaw || '').trim(),
-            srmad: String(srmadRaw || '').trim(),
-            miktar: num(miktarRaw),
-            teslim: teslimCalc < 0 ? 0 : teslimCalc,
-            tutar: num(tutarRaw),
-            nettutar: num(nettutarRaw),
-            doviz: String(dovizRaw || 'TL').trim(),
-            kalanmik: num(kalanRaw),
-            kalannet: num(kalannetRaw),
-            proje: String(projRaw || '').trim(),
-            durum: String(durumRaw || '').trim()
-          };
-        });
+        allData = (fallback || []).map(normalize);
         filteredData = [...allData];
         updateStats();
         renderTable();
