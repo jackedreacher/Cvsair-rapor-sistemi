@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Aylık Raporlar • CVS Air</title>
+  <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1d29; color: #ffffff; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .title { font-size: 24px; font-weight: 700; }
+    .date { color: #a6adc8; font-size: 14px; }
+    .status { background: #252836; border: 1px solid #313244; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .card { background: #252836; border: 1px solid #313244; border-radius: 16px; padding: 16px; }
+    .card h3 { font-size: 16px; margin-bottom: 8px; color: #cdd6f4; }
+    .metric { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+    .metric .label { color: #a6adc8; font-size: 13px; }
+    .metric .value { font-size: 20px; font-weight: 700; }
+    .delta.up { color: #8bd5ca; }
+    .delta.down { color: #f38ba8; }
+    .chart { height: 360px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #313244; padding: 10px; text-align: left; }
+    th { color: #a6adc8; font-weight: 600; }
+    tr:hover td { background: #1f2230; }
+    .note { color: #a6adc8; font-size: 12px; margin-top: 8px; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .chart { height: 280px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">📈 Aylık Raporlar</div>
+      <div class="date" id="headerNow"></div>
+    </div>
+    <div class="status" id="dataStatus">📥 Veriler yükleniyor...</div>
+
+    <div class="grid">
+      <div class="card" id="dailyCard">
+        <h3>Günlük Karşılaştırma</h3>
+        <div class="metric"><span class="label">Son Gün (TL):</span><span class="value" id="dailyLatestTL">—</span></div>
+        <div class="metric"><span class="label">Önceki Gün (TL):</span><span class="value" id="dailyPrevTL">—</span></div>
+        <div class="metric"><span class="label">Değişim:</span><span class="value" id="dailyDeltaTL">—</span> <span class="delta" id="dailyDeltaTLPct">—</span></div>
+        <div class="note">Diğer dövizler aylık tabloda ayrı gösterilir.</div>
+      </div>
+      <div class="card" id="monthlyCard">
+        <h3>Aylık Karşılaştırma</h3>
+        <div class="metric"><span class="label">Bu Ay (TL):</span><span class="value" id="monthNowTL">—</span></div>
+        <div class="metric"><span class="label">Geçen Ay (TL):</span><span class="value" id="monthPrevTL">—</span></div>
+        <div class="metric"><span class="label">Değişim:</span><span class="value" id="monthDeltaTL">—</span> <span class="delta" id="monthDeltaTLPct">—</span></div>
+        <div class="note">TL harici dövizler ayrı sütunlarda izlenir.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Aylık Toplamlar (TL)</h3>
+      <div id="monthlyChart" class="chart"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3>Aylık Detay Tablosu</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Ay</th>
+            <th>Sipariş Adedi</th>
+            <th>TL Toplam</th>
+            <th>USD Toplam</th>
+            <th>EUR Toplam</th>
+            <th>MoM (TL %)</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyTableBody"></tbody>
+      </table>
+      <div class="note">Toplamlar döviz bazında ayrı tutulur; kur dönüşümü uygulanmaz.</div>
+    </div>
+  </div>
+
+  <script>
+    // Plotly yükleme güvenlik ağı (CDN düşerse alternatif veya stub)
+    (function ensurePlotly(){
+      if (typeof window !== 'undefined' && typeof window.Plotly === 'undefined') {
+        const sources = [
+          'https://cdn.plot.ly/plotly-2.26.0.min.js',
+          'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.26.0/plotly.min.js',
+          'https://unpkg.com/plotly.js-dist-min@2.26.0/plotly.min.js'
+        ];
+        let i = 0;
+        const tryNext = () => {
+          if (i >= sources.length) return;
+          const s = document.createElement('script');
+          s.src = sources[i++]; s.async = true;
+          s.onload = () => console.log('Plotly loaded:', s.src);
+          s.onerror = () => { console.warn('Plotly load failed:', s.src); tryNext(); };
+          document.head.appendChild(s);
+        };
+        tryNext();
+        setTimeout(() => { if (typeof window.Plotly === 'undefined') { window.Plotly = { newPlot: () => {} }; } }, 3000);
+      }
+    })();
+
+    // Header saat
+    function startHeaderClock(){
+      const el = document.getElementById('headerNow');
+      const fmt = () => new Date().toLocaleString('tr-TR', {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false}).replace(',', '');
+      el.textContent = `Şu an: ${fmt()}`;
+      setInterval(() => { el.textContent = `Şu an: ${fmt()}`; }, 1000);
+    }
+
+    // Fetch ve cache yardımcıları
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try { return await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' }); }
+      finally { clearTimeout(id); }
+    }
+    async function retryFetch(url, options = {}, retries = 1, timeoutMs = 7000) {
+      let attempt = 0, lastErr;
+      while (attempt <= retries) {
+        try { return await fetchWithTimeout(url, options, timeoutMs); }
+        catch (err) { lastErr = err; attempt++; await new Promise(r => setTimeout(r, 400 * attempt)); }
+      }
+      throw lastErr;
+    }
+
+    const ORDERS_CACHE_KEY = 'ordersCache_v1';
+    function readOrdersCache(){
+      try { const raw = localStorage.getItem(ORDERS_CACHE_KEY); if (!raw) return null; const parsed = JSON.parse(raw); return Array.isArray(parsed.data) ? parsed.data : null; }
+      catch { return null; }
+    }
+    function writeOrdersCache(dataArray){
+      try { localStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: dataArray })); }
+      catch {}
+    }
+
+    // IndexedDB kalıcı cache
+    const IDB_NAME = 'cvsair-db';
+    const IDB_VERSION = 1;
+    const IDB_STORE_ORDERS = 'orders';
+    function idbOpen(){
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = () => { const db = req.result; if (!db.objectStoreNames.contains(IDB_STORE_ORDERS)) db.createObjectStore(IDB_STORE_ORDERS, { keyPath: 'key' }); };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function idbGetLatest(){
+      try { const db = await idbOpen(); return await new Promise((resolve, reject) => { const tx = db.transaction(IDB_STORE_ORDERS, 'readonly'); const st = tx.objectStore(IDB_STORE_ORDERS); const req = st.get('latest'); req.onsuccess = () => resolve(req.result || null); req.onerror = () => reject(req.error); }); }
+      catch(e){ console.warn('IDB read error', e); return null; }
+    }
+    async function idbPutLatest(data){
+      try { const db = await idbOpen(); return await new Promise((resolve, reject) => { const tx = db.transaction(IDB_STORE_ORDERS, 'readwrite'); const st = tx.objectStore(IDB_STORE_ORDERS); const payload = { key:'latest', data, updatedAt: Date.now() }; const req = st.put(payload); req.onsuccess = () => resolve(true); req.onerror = () => reject(req.error); }); }
+      catch(e){ console.warn('IDB write error', e); return false; }
+    }
+    async function ensurePersistence(){
+      if (navigator.storage && navigator.storage.persist) {
+        try { const persisted = await navigator.storage.persisted(); if (!persisted) { await navigator.storage.persist().catch(()=>{}); } } catch {}
+      }
+    }
+
+    // Yardımcılar
+    const fmtMoney = (n) => (typeof n === 'number' ? n : 0).toLocaleString('tr-TR', { minimumFractionDigits: 0 });
+    const pad2 = (n) => String(n).padStart(2, '0');
+    function parseDate(v){ const d = new Date(v); return isNaN(d) ? null : d; }
+    function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+    function ym(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; }
+    function addDays(d, days){ const nd = new Date(d); nd.setDate(nd.getDate()+days); return nd; }
+
+    // Ana akış
+    async function loadData(){
+      const statusDiv = document.getElementById('dataStatus');
+      statusDiv.textContent = '📥 Veriler yükleniyor...';
+
+      // 1) IndexedDB
+      try {
+        const latest = await idbGetLatest();
+        if (latest && Array.isArray(latest.data) && latest.data.length) {
+          statusDiv.textContent = `⚡️ IndexedDB: ${latest.data.length} kayıt`; build(latest.data);
+        }
+      } catch {}
+      // 2) localStorage
+      const cached = readOrdersCache();
+      if (cached && cached.length) {
+        statusDiv.textContent = `⚡️ Cache: ${cached.length} kayıt`; build(cached);
+      }
+      // 3) API
+      try {
+        const res = await retryFetch('/api/orders', {}, 1, 8000);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const api = await res.json();
+        const rows = api.success ? api.data : Array.isArray(api) ? api : [];
+        if (!Array.isArray(rows) || !rows.length) throw new Error('Boş veri');
+        writeOrdersCache(rows); await idbPutLatest(rows);
+        statusDiv.textContent = `✅ API: ${rows.length} kayıt güncellendi`;
+        build(rows);
+      } catch (e) {
+        console.warn('API hatası, örnek veri kullanılacak:', e);
+        if (!(cached && cached.length)) { build(sampleData()); statusDiv.textContent = '⚠️ Örnek veriler gösteriliyor'; }
+      }
+    }
+
+    function sampleData(){
+      return [
+        { tarih: '2025-08-29T00:00:00', nettutar: 11665.2, doviz: 'USD' },
+        { tarih: '2025-08-30T00:00:00', nettutar: 10000, doviz: 'TL' },
+        { tarih: '2025-08-31T00:00:00', nettutar: 8200, doviz: 'EUR' },
+        { tarih: '2025-09-02T00:00:00', nettutar: 15000, doviz: 'TL' },
+        { tarih: '2025-09-03T00:00:00', nettutar: 18000, doviz: 'TL' }
+      ];
+    }
+
+    function build(rows){
+      // Gün ve ay bazlı toplamlar (döviz ayrı)
+      const dayTotals = new Map(); // key: YYYY-MM-DD -> {count, byCurrency}
+      const monthTotals = new Map(); // key: YYYY-MM -> {count, byCurrency}
+      let maxDate = null;
+      for (const r of rows) {
+        const d = parseDate(r.tarih); if (!d) continue; const dayKey = ymd(d), monthKey = ym(d);
+        const cur = (r.doviz || 'TL').toUpperCase(); const val = Number(r.nettutar) || 0;
+        if (!dayTotals.has(dayKey)) dayTotals.set(dayKey, { count:0, byCurrency:{TL:0, USD:0, EUR:0} });
+        const dt = dayTotals.get(dayKey); dt.count += 1; dt.byCurrency[cur] = (dt.byCurrency[cur] || 0) + val;
+        if (!monthTotals.has(monthKey)) monthTotals.set(monthKey, { count:0, byCurrency:{TL:0, USD:0, EUR:0} });
+        const mt = monthTotals.get(monthKey); mt.count += 1; mt.byCurrency[cur] = (mt.byCurrency[cur] || 0) + val;
+        if (!maxDate || d > maxDate) maxDate = d;
+      }
+      if (!maxDate) return;
+
+      // Günlük karşılaştırma (TL)
+      const latestKey = ymd(maxDate);
+      const prevKey = ymd(addDays(maxDate, -1));
+      const latestTL = (dayTotals.get(latestKey)?.byCurrency?.TL) || 0;
+      const prevTL = (dayTotals.get(prevKey)?.byCurrency?.TL) || 0;
+      const dDelta = latestTL - prevTL;
+      const dPct = prevTL ? (dDelta / prevTL) * 100 : (latestTL ? 100 : 0);
+      document.getElementById('dailyLatestTL').textContent = '₺ ' + fmtMoney(latestTL);
+      document.getElementById('dailyPrevTL').textContent = '₺ ' + fmtMoney(prevTL);
+      document.getElementById('dailyDeltaTL').textContent = (dDelta >= 0 ? '+₺ ' : '₺ ') + fmtMoney(dDelta);
+      const dPctEl = document.getElementById('dailyDeltaTLPct'); dPctEl.textContent = `${(dPct).toFixed(1)}%`; dPctEl.className = 'delta ' + (dDelta >= 0 ? 'up' : 'down');
+
+      // Aylık karşılaştırma (TL)
+      const nowMonthKey = ym(maxDate);
+      const prevMonthDate = new Date(maxDate.getFullYear(), maxDate.getMonth()-1, 1);
+      const prevMonthKey = ym(prevMonthDate);
+      const nowTL = (monthTotals.get(nowMonthKey)?.byCurrency?.TL) || 0;
+      const prevTLm = (monthTotals.get(prevMonthKey)?.byCurrency?.TL) || 0;
+      const mDelta = nowTL - prevTLm;
+      const mPct = prevTLm ? (mDelta / prevTLm) * 100 : (nowTL ? 100 : 0);
+      document.getElementById('monthNowTL').textContent = '₺ ' + fmtMoney(nowTL);
+      document.getElementById('monthPrevTL').textContent = '₺ ' + fmtMoney(prevTLm);
+      document.getElementById('monthDeltaTL').textContent = (mDelta >= 0 ? '+₺ ' : '₺ ') + fmtMoney(mDelta);
+      const mPctEl = document.getElementById('monthDeltaTLPct'); mPctEl.textContent = `${(mPct).toFixed(1)}%`; mPctEl.className = 'delta ' + (mDelta >= 0 ? 'up' : 'down');
+
+      // Aylık TL grafiği
+      renderMonthlyChart(monthTotals);
+      // Aylık tablo
+      renderMonthlyTable(monthTotals);
+    }
+
+    function renderMonthlyChart(monthTotals){
+      const months = Array.from(monthTotals.keys()).sort();
+      const tlValues = months.map(m => (monthTotals.get(m)?.byCurrency?.TL) || 0);
+      const trace = { x: months, y: tlValues, type: 'bar', marker: { color: '#89b4fa' } };
+      const layout = {
+        paper_bgcolor: '#1a1d29', plot_bgcolor: '#1a1d29',
+        xaxis: { title: 'Ay', color: '#cdd6f4', gridcolor: '#313244' },
+        yaxis: { title: 'Toplam (TL)', color: '#cdd6f4', gridcolor: '#313244', tickformat: ',.0f' },
+        margin: { l: 60, r: 20, t: 30, b: 40 }, font: { color: '#cdd6f4' }, height: 360
+      };
+      const el = document.getElementById('monthlyChart');
+      if (window.Plotly && window.Plotly.newPlot) { window.Plotly.newPlot(el, [trace], layout); }
+    }
+
+    function renderMonthlyTable(monthTotals){
+      const tbody = document.getElementById('monthlyTableBody');
+      tbody.innerHTML = '';
+      const months = Array.from(monthTotals.keys()).sort();
+      const prevTLByMonth = {}; months.forEach((m, i) => { const prev = months[i-1]; prevTLByMonth[m] = prev ? (monthTotals.get(prev)?.byCurrency?.TL || 0) : 0; });
+      months.forEach(m => {
+        const mt = monthTotals.get(m);
+        const tl = mt.byCurrency.TL || 0; const usd = mt.byCurrency.USD || 0; const eur = mt.byCurrency.EUR || 0;
+        const prevTL = prevTLByMonth[m] || 0; const pct = prevTL ? ((tl - prevTL) / prevTL) * 100 : (tl ? 100 : 0);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${m}</td>
+          <td>${mt.count}</td>
+          <td>₺ ${fmtMoney(tl)}</td>
+          <td>$ ${fmtMoney(usd)}</td>
+          <td>€ ${fmtMoney(eur)}</td>
+          <td>${pct.toFixed(1)}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => { startHeaderClock(); await ensurePersistence(); loadData(); });
+  </script>
+</body>
+</html>

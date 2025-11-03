@@ -387,17 +387,17 @@
 
     <div class="metrics-grid">
       <div class="metric-card">
-        <div class="metric-label">Toplam Oturum (Sipariş)</div>
+        <div class="metric-label">Toplam Sipariş</div>
         <div class="metric-value" id="sessions">-</div>
         <div class="metric-change" id="dsess">-</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Toplam Kullanıcı (Cari)</div>
+        <div class="metric-label">Toplam Cari</div>
         <div class="metric-value" id="users">-</div>
         <div class="metric-change" id="duser">-</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Sayfa Görüntüleme (Miktar)</div>
+        <div class="metric-label">Sayfa Miktar</div>
         <div class="metric-value" id="pviews">-</div>
         <div class="metric-change" id="dpv">-</div>
       </div>
@@ -429,31 +429,6 @@
       <button class="load-btn" onclick="loadCSVData()">🔄 Verileri Yenile</button>
       <div id="dataStatus">📥 Veriler yükleniyor...</div>
     </div>
-     </div>
-     <div class="table-card">
-       <div class="chart-title">Sipariş Tablosu (Tüm Kolonlar)</div>
-       <div class="table-wrapper">
-         <table class="data-table" aria-label="Sipariş Tablosu">
-           <thead>
-             <tr>
-               <th>Sipariş Tarihi</th>
-               <th>Müşteri</th>
-               <th>SRM Kod</th>
-               <th>SRM Adı</th>
-               <th>Miktar</th>
-               <th>Teslim</th>
-               <th>Tutar</th>
-               <th>Net Tutar</th>
-               <th>Döviz</th>
-               <th>Kalan Miktar</th>
-               <th>Kalan Net</th>
-               <th>Proje</th>
-               <th>Durum</th>
-             </tr>
-           </thead>
-           <tbody id="ordersBody"></tbody>
-         </table>
-       </div>
      </div>
      
   </div>
@@ -518,6 +493,69 @@
         localStorage.setItem(ORDERS_CACHE_KEY, JSON.stringify({ ts: Date.now(), data: dataArray }));
       } catch {}
     }
+
+    // IndexedDB helpers for persistent caching
+    const IDB_NAME = 'cvsair-db';
+    const IDB_VERSION = 1;
+    const IDB_STORE_ORDERS = 'orders';
+
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(IDB_STORE_ORDERS)) {
+            db.createObjectStore(IDB_STORE_ORDERS, { keyPath: 'key' });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbGetLatest() {
+      try {
+        const db = await idbOpen();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE_ORDERS, 'readonly');
+          const store = tx.objectStore(IDB_STORE_ORDERS);
+          const req = store.get('latest');
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+      } catch (e) {
+        console.warn('IndexedDB read error', e);
+        return null;
+      }
+    }
+
+    async function idbPutLatest(data) {
+      try {
+        const db = await idbOpen();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(IDB_STORE_ORDERS, 'readwrite');
+          const store = tx.objectStore(IDB_STORE_ORDERS);
+          const payload = { key: 'latest', data, updatedAt: Date.now() };
+          const req = store.put(payload);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      } catch (e) {
+        console.warn('IndexedDB write error', e);
+        return false;
+      }
+    }
+
+    async function ensurePersistence() {
+      if (navigator.storage && navigator.storage.persist) {
+        try {
+          const persisted = await navigator.storage.persisted();
+          if (!persisted) {
+            await navigator.storage.persist().catch(() => {});
+          }
+        } catch {}
+      }
+    }
     
     let prevData = null; // basit "önceki dönem" karşılaştırması için
 
@@ -528,11 +566,21 @@
       const statusDiv = document.getElementById('dataStatus');
       const currentTime = new Date().toLocaleTimeString('tr-TR');
       statusDiv.innerHTML = '📥 Veriler API\'den yükleniyor...';
+
+      // Try IndexedDB first (persistent cache)
+      try {
+        const latest = await idbGetLatest();
+        if (latest && Array.isArray(latest.data) && latest.data.length) {
+          const when = new Date(latest.updatedAt).toLocaleString('tr-TR');
+          statusDiv.innerHTML = `⚡️ IndexedDB'den ${latest.data.length} sipariş yüklendi (Önceki kayıt: ${when})`;
+          processData(latest.data);
+        }
+      } catch {}
       
       // Show cached data immediately, if available
       const cached = readOrdersCache();
       if (cached && cached.length) {
-        statusDiv.innerHTML = `⚡️ Önbellekten ${cached.length} sipariş yüklendi (Son güncelleme: ${currentTime})`;
+        statusDiv.innerHTML = `✅ ${cached.length} sipariş yüklendi (Son güncelleme: ${currentTime})`;
         processData(cached);
       }
       
@@ -553,6 +601,7 @@
         const jsonData = apiResponse.data;
         // Persist raw data to cache
         writeOrdersCache(jsonData);
+        await idbPutLatest(jsonData);
         
         statusDiv.innerHTML = `✅ ${jsonData.length} sipariş API'den yüklendi (Son güncelleme: ${currentTime})`;
         processData(jsonData);
@@ -995,6 +1044,7 @@
       
       // Auto-load data when page loads
       document.addEventListener('DOMContentLoaded', function() {
+        ensurePersistence();
         loadCSVData();
       });
       
