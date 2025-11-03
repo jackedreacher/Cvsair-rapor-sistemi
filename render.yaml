@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: cvsair-dashboard
+    env: python
+    plan: free
+    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT api_server:app
+    envVars:
+      - key: CSV_PATH
+        value: orders.csv
+      - key: REMOTE_API_BASE
+        value: http://85.153.155.153:5047
+      - key: REMOTE_ORDERS_PATH
+        value: /api/Genel/getSIPARISLERCVS
+      # Store the bearer token as a Render Secret named "remote-bearer-token"
+      - key: REMOTE_BEARER_TOKEN
+        fromSecret: remote-bearer-token
+      # Optional: tighten CORS if you host frontend separately
+      # - key: FRONTEND_ORIGIN
+      #   value: https://your-frontend.onrender.com
+
+jobs:
+  - name: keep-warm
+    type: cron
+    env: python
+    schedule: "*/10 * * * *" # every 10 minutes
+    envVars:
+      - key: PING_URL
+        value: https://cvsair-dashboard.onrender.com/api/health
+    runCommand: curl -s -m 8 "$PING_URL" > /dev/null || true

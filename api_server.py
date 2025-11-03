@@ -273,10 +273,12 @@ def get_orders():
         bas_tar = request.args.get('startDate')
         bit_tar = request.args.get('endDate')
         base_url_override = request.args.get('baseUrl')
+        allowed_bases = { REMOTE_API_BASE, 'http://85.153.155.153:5047' }  # sadece izin verilenler
+        selected_base = base_url_override if base_url_override in allowed_bases else None
 
         try:
             # Try to fetch raw data from the API
-            raw_data = get_siparisler(bas_tar, bit_tar, base_url_override)
+            raw_data = get_siparisler(bas_tar, bit_tar, selected_base)
 
             # Process and transform the data
             processed_data = process_data(raw_data)
@@ -421,4 +423,6 @@ if __name__ == '__main__':
     print("  GET /api/health - Health check")
     print("  GET /api/sample-data - Sample data for testing")
     
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    # Bind to PORT from environment for Render; default 8000 for local dev
+    port = int(os.getenv('PORT', '8000'))
+    app.run(host='0.0.0.0', port=port, debug=True)
