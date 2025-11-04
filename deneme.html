@@ -1028,8 +1028,9 @@
               height: isMobile ? 300 : 380,
               background: '#1e1e2e',
               foreColor: '#cdd6f4',
-              toolbar: { show: true },
-              dropShadow: { enabled: true, top: 3, left: 0, blur: 6, opacity: 0.25 }
+              toolbar: { show: !isMobile },
+              dropShadow: { enabled: !isMobile, top: 3, left: 0, blur: 6, opacity: 0.25 },
+              animations: { enabled: !isMobile, easing: 'easeinout', speed: 300, animateGradients: false, dynamicAnimation: { speed: 300 } }
             },
             series: [
               { name: 'TL', data: tlVals },
@@ -1078,15 +1079,16 @@
       const pieLabels = Object.keys(currencyRevenue);
 
       if (window.pieApex) { try { window.pieApex.destroy(); } catch(e){} }
-      const pieOptions = {
-        chart: {
-          type: 'donut',
-          height: isMobile ? 280 : 300,
-          background: '#181825',
-          foreColor: '#cdd6f4',
-          toolbar: { show: true },
-          dropShadow: { enabled: true, top: 2, left: 0, blur: 6, opacity: 0.25 }
-        },
+          const pieOptions = {
+            chart: {
+              type: 'donut',
+              height: isMobile ? 280 : 300,
+              background: '#181825',
+              foreColor: '#cdd6f4',
+              toolbar: { show: !isMobile },
+              dropShadow: { enabled: !isMobile, top: 2, left: 0, blur: 6, opacity: 0.25 },
+              animations: { enabled: !isMobile, easing: 'easeinout', speed: 300, animateGradients: false, dynamicAnimation: { speed: 300 } }
+            },
         series: pieSeries,
         labels: pieLabels,
         colors: ['#89b4fa', '#f38ba8', '#a6e3a1', '#fab387', '#cba6f7'],
@@ -1201,17 +1203,40 @@
     (sidebar.querySelectorAll?.('a.sidebar-item') || []).forEach(a=>{ a.addEventListener('click', closeMenu); });
   })();
 
-  function resizeCharts() {
-    // If ApexCharts instances exist, trigger a render to ensure responsiveness
-    if (window.dailyApex && typeof window.dailyApex.render === 'function') {
-      try { window.dailyApex.render(); } catch (e) {}
-    }
-    if (window.pieApex && typeof window.pieApex.render === 'function') {
-      try { window.pieApex.render(); } catch (e) {}
-    }
-  }
-  window.addEventListener('resize', resizeCharts);
-  window.addEventListener('orientationchange', resizeCharts);
+  // Debounced, lightweight resize handler to avoid heavy re-renders on mobile
+  (function setupChartResize(){
+    let timer = null;
+    const applyResize = () => {
+      const isMobile = window.matchMedia('(max-width: 768px)').matches;
+      if (window.dailyApex && typeof window.dailyApex.updateOptions === 'function') {
+        try {
+          window.dailyApex.updateOptions({
+            chart: { height: isMobile ? 300 : 380, toolbar: { show: !isMobile }, dropShadow: { enabled: !isMobile } },
+            xaxis: { labels: { style: { fontSize: isMobile ? '10px' : '11px' } } },
+            yaxis: { labels: { style: { fontSize: isMobile ? '10px' : '11px' } } },
+            legend: { position: isMobile ? 'top' : 'right', horizontalAlign: isMobile ? 'center' : 'left' },
+            plotOptions: { bar: { columnWidth: isMobile ? '60%' : '55%' } }
+          }, false, false);
+        } catch (e) {}
+      }
+      if (window.pieApex && typeof window.pieApex.updateOptions === 'function') {
+        try {
+          window.pieApex.updateOptions({
+            chart: { height: isMobile ? 280 : 300, toolbar: { show: !isMobile }, dropShadow: { enabled: !isMobile } },
+            legend: { position: isMobile ? 'bottom' : 'right', horizontalAlign: isMobile ? 'center' : 'left' },
+            dataLabels: { style: { fontSize: isMobile ? '10px' : '12px' } },
+            plotOptions: { pie: { donut: { labels: { name: { fontSize: isMobile ? '11px' : '14px' }, value: { fontSize: isMobile ? '12px' : '16px' } } } } }
+          }, false, false);
+        } catch (e) {}
+      }
+    };
+    const onResize = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(applyResize, 200);
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('orientationchange', onResize);
+  })();
 </script>
 <script>
   // Live current time in header (Turkish locale, 24-hour)
