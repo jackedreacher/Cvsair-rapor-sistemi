@@ -8,6 +8,17 @@
   <!-- Professional icon set -->
   <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script>
+    (function(){
+      try {
+        const AUTH_KEY='auth_v1';
+        const REQ_USER='Cvsadmin';
+        const auth = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
+        const ok = auth && auth.u===REQ_USER && typeof auth.t==='string' && auth.t.length>0;
+        if(!ok){ window.location.href='login.html'; }
+      } catch(e){ window.location.href='login.html'; }
+    })();
+  </script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }

@@ -9,6 +9,17 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      (function(){
+        try {
+          const AUTH_KEY='auth_v1';
+          const REQ_USER='Cvsadmin';
+          const auth = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
+          const ok = auth && auth.u===REQ_USER && typeof auth.t==='string' && auth.t.length>0;
+          if(!ok){ window.location.href='login.html'; }
+        } catch(e){ window.location.href='login.html'; }
+      })();
+    </script>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

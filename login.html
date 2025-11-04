@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Giriş - Cvsair</title>
+  <link rel="icon" href="LOGO.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1226;
+      --panel: #1e1e2e;
+      --border: #313244;
+      --text: #cdd6f4;
+      --muted: #a6adc8;
+      --primary: #89b4fa;
+      --primary-2: #b4befe;
+      --success: #a6e3a1;
+      --danger: #f38ba8;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1000px 600px at 20% 0%, #181825 0%, #0f1226 60%), #0f1226;
+      color: var(--text);
+    }
+    .auth {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    .brand { display:flex; align-items:center; gap:12px; margin-bottom: 12px; }
+    .brand img {
+      height: 36px; width:auto; border-radius: 6px; background: #2a2e3f; padding: 4px; border: 1px solid #374151;
+    }
+    h1 { font-size: 22px; margin: 0 0 18px; color: var(--text); }
+    .field { margin-bottom: 14px; }
+    label { font-size: 13px; color: var(--muted); display:block; margin-bottom: 6px; }
+    .input {
+      width: 100%;
+      background: #252836;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 12px 44px 12px 12px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(137,180,250,0.18);
+    }
+    .input-row { position: relative; }
+    .toggle-btn {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      background: transparent; border: 0; color: var(--muted);
+      font-size: 12px; cursor: pointer; padding: 6px 8px; border-radius: 8px;
+    }
+    .toggle-btn:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+    .row { display:flex; justify-content: space-between; align-items:center; margin: 8px 0 14px; }
+    .checkbox { display:flex; align-items:center; gap: 8px; font-size: 13px; color: var(--muted); }
+    .submit {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 0; color: #0f1226;
+      font-weight: 600; background: linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
+      cursor: pointer;
+    }
+    .submit:disabled { opacity: .6; cursor: not-allowed; }
+    .helper { text-align: center; font-size: 13px; color: var(--muted); margin-top: 12px; }
+    .error { color: var(--danger); font-size: 12px; min-height: 16px; margin-top: 4px; }
+    @media (max-width: 420px) {
+      .card { padding: 18px; border-radius: 12px; }
+      h1 { font-size: 20px; }
+    }
+    /* Safe area for iOS notch */
+    @supports (padding: max(0px)) {
+      .auth { padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
+    }
+  </style>
+  <meta name="color-scheme" content="dark" />
+</head>
+<body>
+  <main class="auth">
+    <section class="card" aria-labelledby="loginTitle">
+      <div class="brand">
+        <img src="LOGO.png" alt="Logo" />
+        <span style="color: var(--muted); font-weight: 600;">Cvsair</span>
+      </div>
+      <h1 id="loginTitle">Giriş Yap</h1>
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="username">Kullanıcı adı</label>
+          <input class="input" id="username" name="username" type="text" autocomplete="username" required placeholder="kullanıcı adı" />
+          <div id="userError" class="error"></div>
+        </div>
+        <div class="field">
+          <label for="password">Şifre</label>
+          <div class="input-row">
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+            <button type="button" id="togglePwd" class="toggle-btn" aria-label="Şifreyi göster/gizle">Göster</button>
+          </div>
+          <div id="passError" class="error"></div>
+        </div>
+        <button class="submit" id="submitBtn" type="submit">Giriş Yap</button>
+      </form>
+    </section>
+  </main>
+  <script>
+    (function() {
+      const form = document.getElementById('loginForm');
+      const user = document.getElementById('username');
+      const pass = document.getElementById('password');
+      const userErr = document.getElementById('userError');
+      const passErr = document.getElementById('passError');
+      const submitBtn = document.getElementById('submitBtn');
+      const toggle = document.getElementById('togglePwd');
+
+      toggle.addEventListener('click', () => {
+        const isPwd = pass.type === 'password';
+        pass.type = isPwd ? 'text' : 'password';
+        toggle.textContent = isPwd ? 'Gizle' : 'Göster';
+      });
+
+      const validate = () => {
+        let ok = true;
+        userErr.textContent = '';
+        passErr.textContent = '';
+        if (!user.value.trim()) { userErr.textContent = 'Bu alan boş bırakılamaz.'; ok = false; }
+        if (!pass.value.trim()) { passErr.textContent = 'Şifre gerekli.'; ok = false; }
+        return ok;
+      };
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!validate()) return;
+        // Sabit kimlik bilgileri ile doğrulama
+        const REQ_USER = 'Cvsadmin';
+        const REQ_PASS = 'Cvsair12345?';
+        if (user.value.trim() !== REQ_USER || pass.value !== REQ_PASS) {
+          passErr.textContent = 'Geçersiz kullanıcı adı veya şifre.';
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Giriş yapılıyor...';
+        try {
+          const token = btoa('cvstoken:' + Date.now() + ':' + Math.random().toString(36).slice(2));
+          localStorage.setItem('auth_v1', JSON.stringify({ u: REQ_USER, t: token }));
+        } catch (e) { /* localStorage hatası durumunda yine de geç */ }
+        // Başarılı girişten sonra ana panele yönlendir
+        window.location.href = 'deneme.html';
+      });
+    })();
+  </script>
+</body>
+  </html>
