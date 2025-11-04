@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>Detaylı Rapor - CVSAir</title>
+  <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
   <!-- Plotly core script with defer to avoid blocking, and integrity fallback handled below -->
   <script src="https://cdn.plot.ly/plotly-2.26.0.min.js" defer></script>
   <style>
@@ -181,17 +182,19 @@
     .data-table th:hover {
       background: #252836;
     }
-    .data-table th.sortable::after {
-      content: ' ↕';
-      opacity: 0.5;
+    .data-table th .sort-icon {
+      margin-left: 6px;
+      opacity: 0.6;
+      display: inline-flex;
+      align-items: center;
     }
-    .data-table th.sort-asc::after {
-      content: ' ↑';
+    .data-table th.sort-asc .sort-icon,
+    .data-table th.sort-desc .sort-icon {
       opacity: 1;
     }
-    .data-table th.sort-desc::after {
-      content: ' ↓';
-      opacity: 1;
+    .data-table th .sort-icon i {
+      font-size: 14px;
+      line-height: 1;
     }
     .data-table td {
       color: #ffffff;
@@ -476,17 +479,17 @@
         <table id="dataTable">
           <thead>
             <tr>
-              <th class="sortable" data-column="proje">Proje</th>
-              <th class="sortable" data-column="tarih">Sipariş Tarihi</th>
-              <th class="sortable" data-column="cari">Müşteri</th>
-              <th class="sortable" data-column="miktar">Miktar</th>
-              <th class="sortable" data-column="teslim">Teslim</th>
-              <th class="sortable" data-column="tutar">Tutar</th>
-              <th class="sortable" data-column="nettutar">Net Tutar</th>
-              <th class="sortable" data-column="doviz">Döviz</th>
-              <th class="sortable" data-column="kalanmik">Kalan Miktar</th>
-              <th class="sortable" data-column="kalannet">Kalan Net</th>
-              <th class="sortable" data-column="durum">Durum</th>
+            <th class="sortable" data-column="proje">Proje <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="tarih">Sipariş Tarihi <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="cari">Müşteri <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="miktar">Miktar <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="teslim">Teslim <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="tutar">Tutar <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="nettutar">Net Tutar <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="doviz">Döviz <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="kalanmik">Kalan Miktar <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="kalannet">Kalan Net <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
+            <th class="sortable" data-column="durum">Durum <span class="sort-icon"><i class="ti ti-arrows-sort"></i></span></th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -1195,8 +1198,16 @@
     function updateSortHeaders() {
       document.querySelectorAll('th.sortable').forEach(th => {
         th.classList.remove('sort-asc', 'sort-desc');
+        const icon = th.querySelector('.sort-icon i');
         if (th.dataset.column === sortColumn) {
           th.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+          if (icon) {
+            icon.className = 'ti ' + (sortDirection === 'asc' ? 'ti-arrow-narrow-up' : 'ti-arrow-narrow-down');
+          }
+        } else {
+          if (icon) {
+            icon.className = 'ti ti-arrows-sort';
+          }
         }
       });
     }
@@ -1305,10 +1316,11 @@
       renderPagination();
     });
 
-    // Sıralama için tıklama olayları
+    // Sıralama için tıklama olayları (ikon ve metin tıklamalarını destekler)
     document.addEventListener('click', function(e) {
-      if (e.target.classList.contains('sortable')) {
-        sortData(e.target.dataset.column);
+      const th = e.target.closest && e.target.closest('th.sortable');
+      if (th) {
+        sortData(th.dataset.column);
       }
     });
 
