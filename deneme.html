@@ -285,7 +285,7 @@
       height: 400px;
       background: #181825;
       border-radius: 8px;
-      margin: 10px 0;
+      margin: 0; /* Kart ile aradaki gereksiz boşluğu kaldır */
     }
     .table-card {
       background: #1e1e2e;
@@ -1037,7 +1037,8 @@
               foreColor: '#cdd6f4',
               toolbar: { show: !isMobile },
               dropShadow: { enabled: !isMobile, top: 3, left: 0, blur: 6, opacity: 0.25 },
-              animations: { enabled: !isMobile, easing: 'easeinout', speed: 300, animateGradients: false, dynamicAnimation: { speed: 300 } }
+              animations: { enabled: !isMobile, easing: 'easeinout', speed: 300, animateGradients: false, dynamicAnimation: { speed: 300 } },
+              parentHeightOffset: 0
             },
             series: [
               { name: 'TL', data: tlVals },
@@ -1049,8 +1050,8 @@
               categories: xLabels,
               axisBorder: { show: true, color: '#6c7086', height: 2 },
               axisTicks: { show: true, color: '#6c7086' },
-              labels: { style: { colors: '#a6adc8', fontSize: isMobile ? '10px' : '11px' } },
-              title: { text: 'Ay', style: { color: '#cdd6f4', fontSize: '14px' } }
+              labels: { style: { colors: '#a6adc8', fontSize: isMobile ? '10px' : '11px' }, offsetY: 0 },
+              title: { text: 'Ay', style: { color: '#cdd6f4', fontSize: '14px' }, offsetY: 0 }
             },
             yaxis: {
               title: { text: 'Aylık Toplam', style: { color: '#cdd6f4', fontSize: '14px' } },
@@ -1059,7 +1060,7 @@
               forceNiceScale: true,
               labels: { formatter: (val) => Math.round(val).toLocaleString('tr-TR'), style: { colors: '#a6adc8', fontSize: isMobile ? '10px' : '11px' } }
             },
-            grid: { borderColor: '#45475a', strokeDashArray: 2 },
+            grid: { borderColor: '#45475a', strokeDashArray: 2, padding: { top: 0, right: 8, bottom: 10, left: 8 } },
             legend: { show: true, position: isMobile ? 'top' : 'right', horizontalAlign: isMobile ? 'center' : 'left' },
             plotOptions: { bar: { horizontal: false, columnWidth: isMobile ? '60%' : '55%', borderRadius: 8, borderRadiusApplication: 'end' } },
             dataLabels: { enabled: false },
@@ -1223,19 +1224,21 @@
       if (window.dailyApex && typeof window.dailyApex.updateOptions === 'function') {
         try {
           window.dailyApex.updateOptions({
-            chart: { height: isMobile ? 300 : 380, toolbar: { show: !isMobile }, dropShadow: { enabled: !isMobile } },
-            xaxis: { labels: { style: { fontSize: isMobile ? '10px' : '11px' } } },
+            chart: { height: isMobile ? 300 : 380, toolbar: { show: !isMobile }, dropShadow: { enabled: !isMobile }, parentHeightOffset: 0 },
+            xaxis: { labels: { style: { fontSize: isMobile ? '10px' : '11px' }, offsetY: 0 }, title: { text: 'Ay', style: { color: '#cdd6f4', fontSize: '14px' }, offsetY: 0 } },
             yaxis: {
               min: 0,
               tickAmount: isMobile ? 4 : 6,
               forceNiceScale: true,
+              title: { text: 'Aylık Toplam', style: { color: '#cdd6f4', fontSize: '14px' } },
               labels: {
                 formatter: (val) => Math.round(val).toLocaleString('tr-TR'),
                 style: { fontSize: isMobile ? '10px' : '11px' }
               }
             },
             legend: { position: isMobile ? 'top' : 'right', horizontalAlign: isMobile ? 'center' : 'left' },
-            plotOptions: { bar: { columnWidth: isMobile ? '60%' : '55%' } }
+            plotOptions: { bar: { columnWidth: isMobile ? '60%' : '55%' } },
+            grid: { padding: { top: 0, right: 8, bottom: 10, left: 8 } }
           }, false, false);
         } catch (e) {}
       }
