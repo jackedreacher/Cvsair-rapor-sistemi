@@ -7,6 +7,7 @@
   <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
   <!-- Professional icon set -->
   <link rel="stylesheet" href="https://unpkg.com/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -953,8 +954,8 @@
       
       // Ensure Plotly is available before rendering charts
       const renderCharts = () => {
-        if (typeof window.Plotly === 'undefined') {
-          console.warn('Plotly not loaded yet, retrying in 500ms...');
+        if (typeof window.ApexCharts === 'undefined') {
+          console.warn('ApexCharts not loaded yet, retrying in 500ms...');
           setTimeout(renderCharts, 500);
           return;
         }
@@ -1019,20 +1020,51 @@
             easing: 'cubic-in-out'
           }
       };
-          Plotly.newPlot('daily-line', monthlyTraces, dailyLayout, {
-        displayModeBar: true,
-        modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'autoScale2d'],
-        displaylogo: false,
-        responsive: true
-      });
+          // Render monthly totals with ApexCharts for smoother, shaded look
+          if (window.dailyApex) { try { window.dailyApex.destroy(); } catch(e){} }
+          const apexOptions = {
+            chart: {
+              type: 'bar',
+              height: isMobile ? 300 : 380,
+              background: '#1e1e2e',
+              foreColor: '#cdd6f4',
+              toolbar: { show: true },
+              dropShadow: { enabled: true, top: 3, left: 0, blur: 6, opacity: 0.25 }
+            },
+            series: [
+              { name: 'TL', data: tlVals },
+              { name: 'USD', data: usdVals },
+              { name: 'EUR', data: eurVals }
+            ],
+            colors: ['#fab387', '#a6e3a1', '#89b4fa'],
+            xaxis: {
+              categories: xLabels,
+              axisBorder: { show: true, color: '#6c7086', height: 2 },
+              axisTicks: { show: true, color: '#6c7086' },
+              labels: { style: { colors: '#a6adc8', fontSize: isMobile ? '10px' : '11px' } },
+              title: { text: 'Ay', style: { color: '#cdd6f4', fontSize: '14px' } }
+            },
+            yaxis: {
+              title: { text: 'Aylık Toplam', style: { color: '#cdd6f4', fontSize: '14px' } },
+              labels: { formatter: (val) => Math.round(val).toLocaleString('tr-TR'), style: { colors: '#a6adc8', fontSize: isMobile ? '10px' : '11px' } }
+            },
+            grid: { borderColor: '#45475a', strokeDashArray: 2 },
+            legend: { show: true, position: isMobile ? 'top' : 'right', horizontalAlign: isMobile ? 'center' : 'left' },
+            plotOptions: { bar: { horizontal: false, columnWidth: isMobile ? '60%' : '55%', borderRadius: 8, borderRadiusApplication: 'end' } },
+            dataLabels: { enabled: false },
+            fill: { type: 'gradient', gradient: { shade: 'dark', type: 'vertical', shadeIntensity: 0.35, gradientToColors: ['#f9e0c7', '#c7f7d6', '#c1d8ff'], inverseColors: false, opacityFrom: 0.95, opacityTo: 0.85, stops: [0, 100] } },
+            tooltip: { theme: 'dark', y: { formatter: (val) => Number(val).toLocaleString('tr-TR') } }
+          };
+          window.dailyApex = new ApexCharts(document.querySelector('#daily-line'), apexOptions);
+          window.dailyApex.render();
 
-      // Currency-based revenue pie
+      // Currency-based revenue donut (ApexCharts for modern shaded look)
       const currencyRevenue = {};
       now.forEach(r=>{ 
         const currency = r.doviz || 'TL'; 
         currencyRevenue[currency] = (currencyRevenue[currency]||0) + (r.kalannet||0); 
       });
-      
+
       const shortAmount = (n) => {
         const abs = Math.abs(n || 0);
         const sign = (n||0) < 0 ? '-' : '';
@@ -1041,30 +1073,67 @@
         if (abs >= 1_000) return `${sign}${Math.round(abs/1_000)}K`;
         return `${sign}${abs.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}`;
       };
-      const currencyLabels = Object.keys(currencyRevenue).map(currency => {
-        const amount = shortAmount(currencyRevenue[currency]);
-        return `${currency}: ${amount}`;
-      });
-      
-      const pieTrace = {
-        values: Object.values(currencyRevenue),
-        labels: currencyLabels,
-        type: 'pie', 
-        hole: 0.4,
-        textinfo: 'label+percent',
-        textposition: isMobile ? 'inside' : 'outside',
-        hovertemplate: '<b>%{label}</b><br>Toplam: %{value:,.0f}<extra></extra>',
-        marker: {colors: ['#89b4fa', '#f38ba8', '#a6e3a1', '#fab387', '#cba6f7']}
+
+      const pieSeries = Object.values(currencyRevenue);
+      const pieLabels = Object.keys(currencyRevenue);
+
+      if (window.pieApex) { try { window.pieApex.destroy(); } catch(e){} }
+      const pieOptions = {
+        chart: {
+          type: 'donut',
+          height: isMobile ? 280 : 300,
+          background: '#181825',
+          foreColor: '#cdd6f4',
+          toolbar: { show: true },
+          dropShadow: { enabled: true, top: 2, left: 0, blur: 6, opacity: 0.25 }
+        },
+        series: pieSeries,
+        labels: pieLabels,
+        colors: ['#89b4fa', '#f38ba8', '#a6e3a1', '#fab387', '#cba6f7'],
+        legend: {
+          show: true,
+          position: isMobile ? 'bottom' : 'right',
+          horizontalAlign: isMobile ? 'center' : 'left',
+          formatter: function(seriesName, opts) {
+            const val = opts.w.globals.series[opts.seriesIndex];
+            return seriesName + ': ' + shortAmount(val);
+          }
+        },
+        stroke: { width: 2, colors: ['#181825'] },
+        dataLabels: {
+          enabled: true,
+          style: { fontSize: isMobile ? '10px' : '12px' },
+          formatter: function(value, opts) {
+            const label = opts.w.globals.labels[opts.seriesIndex];
+            const val = opts.w.config.series[opts.seriesIndex];
+            return label + ': ' + shortAmount(val);
+          }
+        },
+        fill: { type: 'gradient', gradient: { shade: 'dark', type: 'horizontal', shadeIntensity: 0.35, gradientToColors: undefined, inverseColors: false, opacityFrom: 0.98, opacityTo: 0.85, stops: [0, 100] } },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: '60%',
+              labels: {
+                show: true,
+                name: { show: true, fontSize: isMobile ? '11px' : '14px', color: '#cdd6f4' },
+                value: { show: true, fontSize: isMobile ? '12px' : '16px', color: '#cdd6f4', formatter: (val) => shortAmount(val) },
+                total: {
+                  show: true,
+                  showAlways: true,
+                  label: 'Toplam',
+                  fontSize: isMobile ? '11px' : '12px',
+                  color: '#a6adc8',
+                  formatter: (w) => shortAmount(w.globals.seriesTotals.reduce((a,b)=> a + b, 0))
+                }
+              }
+            }
+          }
+        },
+        tooltip: { theme: 'dark', y: { formatter: (val) => shortAmount(val) } }
       };
-      const pieLayout = {
-        title: '',
-        height: isMobile ? 280 : 300,
-        margin: {l: 20, r: 20, t: 20, b: 20},
-        paper_bgcolor: '#181825',
-        plot_bgcolor: '#181825',
-        font: {color: '#a6adc8', size: 12}
-      };
-      Plotly.newPlot('source-pie', [pieTrace], pieLayout);
+      window.pieApex = new ApexCharts(document.querySelector('#source-pie'), pieOptions);
+      window.pieApex.render();
 
       // (Müşteri miktar grafiği kaldırıldı)
       
@@ -1133,12 +1202,13 @@
   })();
 
   function resizeCharts() {
-    ['daily-line','source-pie'].forEach(id=>{
-      const el = document.getElementById(id);
-      if (el && window.Plotly && typeof (window.Plotly.Plots && window.Plotly.Plots.resize) === 'function') {
-        window.Plotly.Plots.resize(el);
-      }
-    });
+    // If ApexCharts instances exist, trigger a render to ensure responsiveness
+    if (window.dailyApex && typeof window.dailyApex.render === 'function') {
+      try { window.dailyApex.render(); } catch (e) {}
+    }
+    if (window.pieApex && typeof window.pieApex.render === 'function') {
+      try { window.pieApex.render(); } catch (e) {}
+    }
   }
   window.addEventListener('resize', resizeCharts);
   window.addEventListener('orientationchange', resizeCharts);
