@@ -907,35 +907,59 @@
         if ((r.doviz || '').toUpperCase() === 'USD') mk.revUSD += (r.kalannet || 0);
         if (!latestMonthKey || key > latestMonthKey) latestMonthKey = key;
       }
-      const prevMonthKey = (() => {
+      // 3 Aylık pencere: son 3 ay vs önceki 3 ay
+      const fmtAbs = (n)=> (n>=0?'+':'') + (Math.round(n)).toLocaleString('tr-TR');
+      const pct = (delta, prev) => prev ? ((delta/prev)*100) : (delta !== 0 ? 100 : 0);
+      const lastNMonthKeys = (endKey, n) => {
+        const [yy, mm] = endKey.split('-').map(Number);
+        const end = new Date(yy, mm - 1, 1);
+        const arr = [];
+        for (let i = 0; i < n; i++) {
+          const d = new Date(end);
+          d.setMonth(d.getMonth() - i);
+          arr.push(ymKey(d));
+        }
+        return arr;
+      };
+      const aggregateWindow = (keys) => {
+        let sessions = 0, pviews = 0, revUSD = 0; const users = new Set();
+        keys.forEach(k => {
+          const m = monthKpiMap.get(k);
+          if (!m) return;
+          sessions += m.sessions;
+          pviews += m.pviews;
+          revUSD += m.revUSD;
+          m.users.forEach(u => users.add(u));
+        });
+        return { sessions, usersSize: users.size, pviews, revUSD };
+      };
+      const currentKeys = latestMonthKey ? lastNMonthKeys(latestMonthKey, 3) : [];
+      const prevEndKey = (() => {
         if (!latestMonthKey) return null;
         const [yy, mm] = latestMonthKey.split('-').map(Number);
         const d = new Date(yy, mm - 1, 1);
-        d.setMonth(d.getMonth() - 1);
+        d.setMonth(d.getMonth() - 3);
         return ymKey(d);
       })();
-      const curMonth = monthKpiMap.get(latestMonthKey) || { sessions: 0, users: new Set(), pviews: 0, revUSD: 0 };
-      const prevMonth = (prevMonthKey && monthKpiMap.get(prevMonthKey)) || { sessions: 0, users: new Set(), pviews: 0, revUSD: 0 };
-
-      const fmtAbs = (n)=> (n>=0?'+':'') + (Math.round(n)).toLocaleString('tr-TR');
-      const pct = (delta, prev) => prev ? ((delta/prev)*100) : (delta !== 0 ? 100 : 0);
-
-      const dSessAbs = curMonth.sessions - prevMonth.sessions;
-      const dUserAbs = curMonth.users.size - prevMonth.users.size;
-      const dPviewsAbs = curMonth.pviews - prevMonth.pviews;
-      const dRevAbs = curMonth.revUSD - prevMonth.revUSD;
+      const prevKeys = prevEndKey ? lastNMonthKeys(prevEndKey, 3) : [];
+      const cur3 = aggregateWindow(currentKeys);
+      const prev3 = aggregateWindow(prevKeys);
+      const dSessAbs = cur3.sessions - prev3.sessions;
+      const dUserAbs = cur3.usersSize - prev3.usersSize;
+      const dPviewsAbs = cur3.pviews - prev3.pviews;
+      const dRevAbs = cur3.revUSD - prev3.revUSD;
 
       // Üstte toplam veriler kalsın (tüm dataset üzerinden)
       const kNow = kpi(now);
 
       document.getElementById('sessions').textContent = kNow.sessions.toLocaleString('tr-TR');
-      document.getElementById('dsess').textContent = `${fmtAbs(dSessAbs)} (${pct(dSessAbs, prevMonth.sessions).toFixed(1)}%) önceki aya göre`;
+      document.getElementById('dsess').textContent = `${fmtAbs(dSessAbs)} (${pct(dSessAbs, prev3.sessions).toFixed(1)}%) önceki 3 aya göre`;
       document.getElementById('users').textContent = kNow.users.toLocaleString('tr-TR');
-      document.getElementById('duser').textContent = `${fmtAbs(dUserAbs)} (${pct(dUserAbs, prevMonth.users.size).toFixed(1)}%) önceki aya göre`;
+      document.getElementById('duser').textContent = `${fmtAbs(dUserAbs)} (${pct(dUserAbs, prev3.usersSize).toFixed(1)}%) önceki 3 aya göre`;
       document.getElementById('pviews').textContent = kNow.pviews.toLocaleString('tr-TR');
-      document.getElementById('dpv').textContent = `${fmtAbs(dPviewsAbs)} (${pct(dPviewsAbs, prevMonth.pviews).toFixed(1)}%) önceki aya göre`;
+      document.getElementById('dpv').textContent = `${fmtAbs(dPviewsAbs)} (${pct(dPviewsAbs, prev3.pviews).toFixed(1)}%) önceki 3 aya göre`;
       document.getElementById('rev').textContent = '$'+kNow.rev.toLocaleString('tr-TR', { minimumFractionDigits: 2 });
-      document.getElementById('drev').textContent = `${dRevAbs>=0?'+':'-'}$${Math.abs(dRevAbs).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} (${pct(dRevAbs, prevMonth.revUSD).toFixed(1)}%) önceki aya göre`;
+      document.getElementById('drev').textContent = `${dRevAbs>=0?'+':'-'}$${Math.abs(dRevAbs).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} (${pct(dRevAbs, prev3.revUSD).toFixed(1)}%) önceki 3 aya göre`;
 
       // Not: Artık KPI değerleri aylık bazda hesaplandığı için localStorage bazlı önceki değer tutma kullanılmıyor.
 
