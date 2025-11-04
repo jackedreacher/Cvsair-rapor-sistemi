@@ -312,6 +312,15 @@
     .currency-usd { color: #a6e3a1; }
     .currency-eur { color: #89b4fa; }
     .currency-tl { color: #fab387; }
+    /* Mobil uyumluluk: küçük ekranlarda grafikleri ve gridleri daha okunur yap */
+    @media (max-width: 768px) {
+      .chart-section { grid-template-columns: 1fr; gap: 16px; }
+      .bottom-section { grid-template-columns: 1fr; }
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .chart-card { padding: 16px; }
+      .chart-title { font-size: 14px; margin-bottom: 12px; }
+      #daily-line, #source-pie { height: 300px; }
+    }
   </style>
 <style>
   /* Responsive enhancements */
@@ -947,64 +956,66 @@
         }
         
         try {
-          Plotly.newPlot('daily-line', monthlyTraces, {
-        title: {
-          text: '',
-          font: {color: '#cdd6f4', size: 16, family: 'Inter, sans-serif'}
-        },
-        xaxis: {
-          title: { text: '📅 Ay', font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'} },
-          color: '#cdd6f4',
-          gridcolor: '#45475a',
-          gridwidth: 1,
-          showgrid: true,
-          type: 'category',
-          tickfont: {color: '#a6adc8', size: 11},
-          linecolor: '#6c7086',
-          linewidth: 2,
-          mirror: true
-        },
-        yaxis: {
-          title: { text: '💰 Aylık Toplam', font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'} },
-          color: '#cdd6f4',
-          gridcolor: '#45475a',
-          gridwidth: 1,
-          showgrid: true,
-          tickformat: ',.0f',
-          tickfont: {color: '#a6adc8', size: 11},
-          linecolor: '#6c7086',
-          linewidth: 2,
-          mirror: true,
-          zeroline: true,
-          zerolinecolor: '#6c7086',
-          zerolinewidth: 2
-        },
-        showlegend: true,
-        legend: {
-          font: {color: '#cdd6f4', size: 12, family: 'Inter, sans-serif'},
+          const isMobile = window.matchMedia('(max-width: 768px)').matches;
+          const dailyLayout = {
+          title: {
+            text: '',
+            font: {color: '#cdd6f4', size: 16, family: 'Inter, sans-serif'}
+          },
+          xaxis: {
+            title: { text: '📅 Ay', font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'} },
+            color: '#cdd6f4',
+            gridcolor: '#45475a',
+            gridwidth: 1,
+            showgrid: true,
+            type: 'category',
+          tickfont: {color: '#a6adc8', size: isMobile ? 10 : 11},
+            linecolor: '#6c7086',
+            linewidth: 2,
+            mirror: true
+          },
+          yaxis: {
+            title: { text: '💰 Aylık Toplam', font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'} },
+            color: '#cdd6f4',
+            gridcolor: '#45475a',
+            gridwidth: 1,
+            showgrid: true,
+            tickformat: ',.0f',
+          tickfont: {color: '#a6adc8', size: isMobile ? 10 : 11},
+            linecolor: '#6c7086',
+            linewidth: 2,
+            mirror: true,
+            zeroline: true,
+            zerolinecolor: '#6c7086',
+            zerolinewidth: 2
+          },
+          showlegend: true,
+          legend: {
+          font: {color: '#cdd6f4', size: isMobile ? 11 : 12, family: 'Inter, sans-serif'},
           bgcolor: 'rgba(30, 30, 46, 0.8)',
           bordercolor: '#6c7086',
           borderwidth: 1,
-          orientation: 'v',
-          x: 1.02,
-          y: 1,
-          xanchor: 'left',
-          yanchor: 'top'
-        },
-        paper_bgcolor: '#181825',
-        plot_bgcolor: '#1e1e2e',
-        font: {color: '#cdd6f4', family: 'Inter, sans-serif'},
-        height: 380,
-        margin: {l: 80, r: 140, t: 50, b: 80},
-        hovermode: 'x unified',
-          barmode: 'group',
-          bargap: 0.01,
-          bargroupgap: 0.01,
-        transition: {
-          duration: 500,
-          easing: 'cubic-in-out'
-        }
-      }, {
+          orientation: isMobile ? 'h' : 'v',
+          x: isMobile ? 0.5 : 1.02,
+          y: isMobile ? 1.05 : 1,
+          xanchor: isMobile ? 'center' : 'left',
+          yanchor: isMobile ? 'bottom' : 'top'
+          },
+          paper_bgcolor: '#181825',
+          plot_bgcolor: '#1e1e2e',
+          font: {color: '#cdd6f4', family: 'Inter, sans-serif'},
+        height: isMobile ? 300 : 380,
+        margin: {l: isMobile ? 50 : 80, r: isMobile ? 20 : 140, t: isMobile ? 40 : 50, b: isMobile ? 60 : 80},
+          hovermode: 'x unified',
+          barmode: isMobile ? 'stack' : 'group',
+          bargap: isMobile ? 0.1 : 0.01,
+          bargroupgap: isMobile ? 0.1 : 0.01,
+          transition: {
+            duration: 500,
+            easing: 'cubic-in-out'
+          }
+      };
+          Plotly.newPlot('daily-line', monthlyTraces, dailyLayout, {
         displayModeBar: true,
         modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'autoScale2d'],
         displaylogo: false,
@@ -1031,23 +1042,25 @@
         return `${currency}: ${amount}`;
       });
       
-      Plotly.newPlot('source-pie', [{
+      const pieTrace = {
         values: Object.values(currencyRevenue),
         labels: currencyLabels,
         type: 'pie', 
         hole: 0.4,
         textinfo: 'label+percent',
-        textposition: 'outside',
+        textposition: isMobile ? 'inside' : 'outside',
         hovertemplate: '<b>%{label}</b><br>Toplam: %{value:,.0f}<extra></extra>',
         marker: {colors: ['#89b4fa', '#f38ba8', '#a6e3a1', '#fab387', '#cba6f7']}
-      }], {
+      };
+      const pieLayout = {
         title: '',
-        height: 300,
-        margin: {l: 20, r: 20, t: 40, b: 20},
+        height: isMobile ? 280 : 300,
+        margin: {l: 20, r: 20, t: 20, b: 20},
         paper_bgcolor: '#181825',
         plot_bgcolor: '#181825',
         font: {color: '#a6adc8', size: 12}
-      });
+      };
+      Plotly.newPlot('source-pie', [pieTrace], pieLayout);
 
       // (Müşteri miktar grafiği kaldırıldı)
       
