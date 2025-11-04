@@ -275,10 +275,10 @@
     }
     .bottom-section {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 24px;
     }
-    #daily-line, #source-pie, #bar-cari {
+    #daily-line, #source-pie {
       height: 400px;
       background: #181825;
       border-radius: 8px;
@@ -414,16 +414,12 @@
          <div id="daily-line"></div>
        </div>
        <div class="chart-card">
-         <div class="chart-title">Döviz Cinsi Bazında Toplam Kazanç</div>
+         <div class="chart-title">Döviz Cinsi Bazında Toplam(Miktar)</div>
          <div id="source-pie"></div>
        </div>
      </div>
  
      <div class="bottom-section">
-       <div class="chart-card">
-         <div class="chart-title">En Çok Sipariş Veren Müşteriler (Miktar)</div>
-         <div id="bar-cari"></div>
-       </div>
         <div class="upload-section">
       <h2>📊 Sipariş Verileri</h2>
       <button class="load-btn" onclick="loadCSVData()">🔄 Verileri Yenile</button>
@@ -916,76 +912,31 @@
         } catch (e) { console.warn('Günlük snapshot yazma hatası', e); }
       })();
 
-      // Proje-zaman çizgisi (kalannet ile)
-      const projects = {};
-      const allDates = new Set();
-      now.forEach(r=>{
-        const projectName = (r.proje && r.proje.toLowerCase() !== 'tanımsız') ? r.proje : (r.srmad && r.srmad.toLowerCase() !== 'tanımsız') ? r.srmad : (r.cari || 'Bilinmeyen Proje');
-        const dateStr = r.date.toISOString().slice(0,10);
-        allDates.add(dateStr);
-        if (!projects[projectName]) projects[projectName] = {};
-        projects[projectName][dateStr] = (projects[projectName][dateStr] || 0) + (r.kalannet || 0);
+      // Aylara göre toplam kolon grafiği (firma/proje ayrımı olmadan)
+      const monthTotals = {};
+      const fmtMonth = (key) => { const [y,m] = key.split('-'); return `${m}.${y}`; };
+      now.forEach(r => {
+        const y = r.date?.getFullYear?.() || new Date(r.date).getFullYear();
+        const m = (r.date?.getMonth?.() ?? new Date(r.date).getMonth()) + 1;
+        const key = `${y}-${String(m).padStart(2,'0')}`;
+        const curr = (r.doviz || 'TL').toUpperCase();
+        if (!monthTotals[key]) monthTotals[key] = { TL: 0, USD: 0, EUR: 0 };
+        const val = Number(r.kalannet || 0) || 0;
+        if (curr in monthTotals[key]) monthTotals[key][curr] += val; else {
+          // Diğer dövizler için ayrı anahtar gerekirse eklenebilir; şimdilik yok sayılıyor
+        }
       });
-      
-      // Convert to sorted array of dates
-      const sortedDates = Array.from(allDates).sort();
-      
-      // Get top 5 projects by total revenue
-      const projectTotals = Object.keys(projects).map(projectName => ({
-        name: projectName,
-        total: Object.values(projects[projectName]).reduce((sum, val) => sum + val, 0)
-      })).sort((a, b) => b.total - a.total).slice(0, 5);
-      
-      const projectTraces = projectTotals.map((project, index) => {
-        const projectName = project.name;
-        const gradientColors = [
-          ['#89b4fa', '#74c0fc'], // Blue gradient
-          ['#f38ba8', '#fcc2d7'], // Pink gradient
-          ['#a6e3a1', '#d9f7be'], // Green gradient
-          ['#fab387', '#ffd8a8'], // Orange gradient
-          ['#cba6f7', '#e4c7f5']  // Purple gradient
-        ];
-        
-        // Create daily revenue data for each project
-        const dailyData = sortedDates.map(date => {
-          return projects[projectName][date] || 0;
-        });
-        
-        const colorPair = gradientColors[index % gradientColors.length];
-        
-        return {
-          x: sortedDates,
-          y: dailyData,
-          type: 'bar',
-          name: projectName.length > 25 ? projectName.substring(0, 25) + '...' : projectName,
-          marker: {
-             color: dailyData.map((_, i) => {
-               // Create gradient effect by alternating between two colors
-               return i % 2 === 0 ? colorPair[0] : colorPair[1];
-             }),
-             opacity: 0.9,
-             line: {
-                color: colorPair[0],
-                width: 4
-              },
-             pattern: {
-               shape: '',
-               bgcolor: colorPair[1],
-               fgcolor: colorPair[0],
-               fgopacity: 0.3
-             }
-           },
-           width: 1.0,
-          hovertemplate: '<b style="color: ' + colorPair[0] + ';">%{fullData.name}</b><br>' +
-                        '<span style="color: #a6adc8;">📅 Tarih:</span> %{x}<br>' +
-                        '<span style="color: #a6adc8;">💰 Tutar:</span> <b style="color: #a6e3a1;">%{y:,.0f} TL</b><extra></extra>',
-          hoverlabel: {
-            bgcolor: '#1e1e2e',
-            bordercolor: colorPair[0],
-            font: {color: '#cdd6f4', size: 12}
-          }
-        };
-      });
+      const months = Object.keys(monthTotals).sort();
+      const tlVals = months.map(k => monthTotals[k].TL || 0);
+      const usdVals = months.map(k => monthTotals[k].USD || 0);
+      const eurVals = months.map(k => monthTotals[k].EUR || 0);
+      const xLabels = months.map(fmtMonth);
+
+      const monthlyTraces = [
+        { x: xLabels, y: tlVals, type: 'bar', name: 'TL', marker: { color: '#fab387' } },
+        { x: xLabels, y: usdVals, type: 'bar', name: 'USD', marker: { color: '#a6e3a1' } },
+        { x: xLabels, y: eurVals, type: 'bar', name: 'EUR', marker: { color: '#89b4fa' } }
+      ];
       
       // Ensure Plotly is available before rendering charts
       const renderCharts = () => {
@@ -996,32 +947,25 @@
         }
         
         try {
-          Plotly.newPlot('daily-line', projectTraces, {
+          Plotly.newPlot('daily-line', monthlyTraces, {
         title: {
           text: '',
           font: {color: '#cdd6f4', size: 16, family: 'Inter, sans-serif'}
         },
         xaxis: {
-          title: {
-            text: '📅 Tarih',
-            font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'}
-          },
+          title: { text: '📅 Ay', font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'} },
           color: '#cdd6f4',
           gridcolor: '#45475a',
           gridwidth: 1,
           showgrid: true,
-          type: 'date',
-          tickformat: '%d.%m.%Y',
+          type: 'category',
           tickfont: {color: '#a6adc8', size: 11},
           linecolor: '#6c7086',
           linewidth: 2,
           mirror: true
         },
         yaxis: {
-          title: {
-            text: '💰 Günlük Tutar (TL)',
-            font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'}
-          },
+          title: { text: '💰 Aylık Toplam', font: {color: '#cdd6f4', size: 14, family: 'Inter, sans-serif'} },
           color: '#cdd6f4',
           gridcolor: '#45475a',
           gridwidth: 1,
@@ -1074,8 +1018,16 @@
         currencyRevenue[currency] = (currencyRevenue[currency]||0) + (r.kalannet||0); 
       });
       
+      const shortAmount = (n) => {
+        const abs = Math.abs(n || 0);
+        const sign = (n||0) < 0 ? '-' : '';
+        if (abs >= 1_000_000_000) return `${sign}${Math.round(abs/1_000_000_000)}B`;
+        if (abs >= 1_000_000) return `${sign}${Math.round(abs/1_000_000)}M`;
+        if (abs >= 1_000) return `${sign}${Math.round(abs/1_000)}K`;
+        return `${sign}${abs.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}`;
+      };
       const currencyLabels = Object.keys(currencyRevenue).map(currency => {
-        const amount = currencyRevenue[currency].toLocaleString('tr-TR', {minimumFractionDigits: 2});
+        const amount = shortAmount(currencyRevenue[currency]);
         return `${currency}: ${amount}`;
       });
       
@@ -1086,6 +1038,7 @@
         hole: 0.4,
         textinfo: 'label+percent',
         textposition: 'outside',
+        hovertemplate: '<b>%{label}</b><br>Toplam: %{value:,.0f}<extra></extra>',
         marker: {colors: ['#89b4fa', '#f38ba8', '#a6e3a1', '#fab387', '#cba6f7']}
       }], {
         title: '',
@@ -1096,42 +1049,7 @@
         font: {color: '#a6adc8', size: 12}
       });
 
-      // Top 10 customers by quantity
-      const customerQuantity = {};
-      now.forEach(r=>{ 
-        const customer = r.cari || 'Bilinmeyen Müşteri'; 
-        customerQuantity[customer] = (customerQuantity[customer]||0) + (r.miktar||0); 
-      });
-      const sortedByQuantity = Object.entries(customerQuantity).sort((a,b)=>b[1]-a[1]).slice(0,10);
-      
-      Plotly.newPlot('bar-cari', [{
-        x: sortedByQuantity.map(s=>s[1]),
-        y: sortedByQuantity.map(s=>s[0].length > 25 ? s[0].substring(0,25)+'...' : s[0]),
-        type: 'bar', 
-        orientation: 'h',
-        text: sortedByQuantity.map(s=>s[1].toLocaleString('tr-TR')),
-        textposition: 'outside',
-        marker: {color: '#89b4fa'}
-      }], {
-        title: '',
-        xaxis: {
-          title: 'Toplam Miktar',
-          color: '#a6adc8',
-          gridcolor: '#313244',
-          showgrid: true
-        },
-        yaxis: {
-          title: '',
-          color: '#a6adc8',
-          gridcolor: '#313244',
-          showgrid: false
-        },
-        height: 300,
-        margin: {l: 180, r: 20, t: 40, b: 40},
-        paper_bgcolor: '#181825',
-        plot_bgcolor: '#181825',
-        font: {color: '#a6adc8'}
-      });
+      // (Müşteri miktar grafiği kaldırıldı)
       
       } catch (error) {
         console.error('Chart rendering error:', error);
@@ -1198,7 +1116,7 @@
   })();
 
   function resizeCharts() {
-    ['daily-line','source-pie','bar-cari'].forEach(id=>{
+    ['daily-line','source-pie'].forEach(id=>{
       const el = document.getElementById(id);
       if (el && window.Plotly && typeof (window.Plotly.Plots && window.Plotly.Plots.resize) === 'function') {
         window.Plotly.Plots.resize(el);
