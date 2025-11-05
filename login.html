@@ -115,6 +115,20 @@
           </div>
           <div id="passError" class="error"></div>
         </div>
+        <div class="field">
+          <label>Görünürlük seçenekleri</label>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:8px;">
+            <label style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="showKpis" checked /> KPI Kartları
+            </label>
+            <label style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="showCharts" checked /> Grafikler
+            </label>
+            <label style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" id="showTables" checked /> Tablo
+            </label>
+          </div>
+        </div>
         <button class="submit" id="submitBtn" type="submit">Giriş Yap</button>
       </form>
     </section>
@@ -148,9 +162,10 @@
         e.preventDefault();
         if (!validate()) return;
         // Sabit kimlik bilgileri ile doğrulama
-        const REQ_USER = 'Cvsadmin';
+        const ALLOWED = ['Cvsadmin','yunus'];
         const REQ_PASS = 'Cvsair12345?';
-        if (user.value.trim() !== REQ_USER || pass.value !== REQ_PASS) {
+        const uname = user.value.trim();
+        if (!ALLOWED.includes(uname) || pass.value !== REQ_PASS) {
           passErr.textContent = 'Geçersiz kullanıcı adı veya şifre.';
           return;
         }
@@ -158,7 +173,10 @@
         submitBtn.textContent = 'Giriş yapılıyor...';
         try {
           const token = btoa('cvstoken:' + Date.now() + ':' + Math.random().toString(36).slice(2));
-          localStorage.setItem('auth_v1', JSON.stringify({ u: REQ_USER, t: token }));
+          const showKpis = document.getElementById('showKpis').checked;
+          const showCharts = document.getElementById('showCharts').checked;
+          const showTables = document.getElementById('showTables').checked;
+          localStorage.setItem('auth_v1', JSON.stringify({ u: uname, t: token, features: { kpis: !!showKpis, charts: !!showCharts, tables: !!showTables } }));
         } catch (e) { /* localStorage hatası durumunda yine de geç */ }
         // Başarılı girişten sonra ana panele yönlendir
         window.location.href = 'deneme.html';

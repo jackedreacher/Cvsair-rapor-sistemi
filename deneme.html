@@ -12,9 +12,9 @@
     (function(){
       try {
         const AUTH_KEY='auth_v1';
-        const REQ_USER='Cvsadmin';
+        const ALLOWED=['Cvsadmin','yunus'];
         const auth = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
-        const ok = auth && auth.u===REQ_USER && typeof auth.t==='string' && auth.t.length>0;
+        const ok = auth && Array.isArray(ALLOWED) && ALLOWED.includes(auth.u) && typeof auth.t==='string' && auth.t.length>0;
         if(!ok){ window.location.href='login.html'; }
       } catch(e){ window.location.href='login.html'; }
     })();
@@ -1336,5 +1336,21 @@
   }
   document.addEventListener('DOMContentLoaded', startHeaderClock);
 </script>
+  <script>
+    // Özellik bayraklarına göre bölümleri göster/gizle
+    (function(){
+      function applyFeatureFlags(){
+        try {
+          const auth = JSON.parse(localStorage.getItem('auth_v1')||'{}');
+          const ft = (auth && auth.features) || { kpis:true, charts:true, tables:true };
+          const hide = (sel) => { const el = document.querySelector(sel); if (el) el.style.display = 'none'; };
+          if(!ft.kpis){ hide('.metrics-grid'); }
+          if(!ft.charts){ hide('.chart-section'); hide('.bottom-section'); hide('#daily-line'); hide('#source-pie'); }
+          if(!ft.tables){ hide('.table-card'); }
+        } catch(e) {}
+      }
+      document.addEventListener('DOMContentLoaded', applyFeatureFlags);
+    })();
+  </script>
 </body>
 </html>
