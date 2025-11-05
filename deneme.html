@@ -1342,7 +1342,17 @@
       function applyFeatureFlags(){
         try {
           const auth = JSON.parse(localStorage.getItem('auth_v1')||'{}');
-          const ft = (auth && auth.features) || { kpis:true, charts:true, tables:true };
+          let ft = { kpis:true, charts:true, tables:true };
+          try {
+            const feats = JSON.parse(localStorage.getItem('features_v1')||'{}');
+            const user = auth && auth.u;
+            if (feats && feats.byUser && user && feats.byUser[user]) {
+              ft = Object.assign(ft, feats.byUser[user]);
+            } else if (auth && auth.features) {
+              // Geriye dönük uyumluluk: auth_v1.features varsa kullan
+              ft = Object.assign(ft, auth.features);
+            }
+          } catch(e) {}
           const hide = (sel) => { const el = document.querySelector(sel); if (el) el.style.display = 'none'; };
           if(!ft.kpis){ hide('.metrics-grid'); }
           if(!ft.charts){ hide('.chart-section'); hide('.bottom-section'); hide('#daily-line'); hide('#source-pie'); }

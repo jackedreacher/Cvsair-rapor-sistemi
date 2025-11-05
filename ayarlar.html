@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ayarlar • Kullanıcı Özellikleri</title>
+  <link rel="icon" href="LOGO.png" />
+  <style>
+    :root {
+      --bg: #0f1226;
+      --panel: #1e1e2e;
+      --border: #313244;
+      --text: #cdd6f4;
+      --muted: #a6adc8;
+      --primary: #89b4fa;
+      --success: #a6e3a1;
+      --danger: #f38ba8;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background: radial-gradient(1000px 600px at 20% 0%, #181825 0%, #0f1226 60%), #0f1226; color: var(--text); }
+    .wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .card { width: 100%; max-width: 640px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }
+    h1 { font-size: 22px; margin: 0 0 12px 0; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; margin-top: 12px; }
+    label { color: var(--muted); }
+    select, input[type="checkbox"] { font-size: 14px; }
+    .checkboxes { display:flex; gap:16px; flex-wrap:wrap; }
+    .btns { display:flex; gap:12px; margin-top: 16px; }
+    .btn { background: #3b82f6; border: 1px solid #2563eb; color:#fff; padding:10px 14px; border-radius:10px; cursor:pointer; }
+    .btn.secondary { background: #374151; border-color: #4b5563; }
+    .status { margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .danger { color: var(--danger); }
+  </style>
+  <script>
+    (function(){
+      try {
+        const AUTH_KEY='auth_v1';
+        const ALLOWED=['Cvsadmin','yunus'];
+        const auth = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
+        const ok = auth && ALLOWED.includes(auth.u) && typeof auth.t==='string' && auth.t.length>0;
+        if(!ok){ window.location.href='login.html'; return; }
+        // Bu sayfa sadece admin (Cvsadmin) tarafından erişilebilir
+        if(auth.u !== 'Cvsadmin'){ window.location.href='deneme.html'; return; }
+      } catch(e){ window.location.href='login.html'; }
+    })();
+  </script>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card" aria-labelledby="settingsTitle">
+      <h1 id="settingsTitle">Kullanıcı Özellik Ayarları</h1>
+      <div class="muted">KPI, grafik ve tablo görünürlüğünü kullanıcı bazında düzenleyin.</div>
+
+      <div class="row">
+        <label for="userSelect">Kullanıcı</label>
+        <select id="userSelect">
+          <option value="Cvsadmin">Cvsadmin</option>
+          <option value="yunus">yunus</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Özellikler</label>
+        <div class="checkboxes">
+          <label><input type="checkbox" id="flagKpis"> KPI Kartları</label>
+          <label><input type="checkbox" id="flagCharts"> Grafikler</label>
+          <label><input type="checkbox" id="flagTables"> Tablo</label>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="btn" id="saveBtn">Kaydet</button>
+        <button class="btn secondary" id="gotoDashboard">Deneme (Dashboard)</button>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+  </main>
+  <script>
+    (function(){
+      const KEY='features_v1';
+      const userSelect = document.getElementById('userSelect');
+      const flagKpis = document.getElementById('flagKpis');
+      const flagCharts = document.getElementById('flagCharts');
+      const flagTables = document.getElementById('flagTables');
+      const saveBtn = document.getElementById('saveBtn');
+      const status = document.getElementById('status');
+      const gotoDashboard = document.getElementById('gotoDashboard');
+
+      function readFeatures(){
+        try {
+          const raw = localStorage.getItem(KEY);
+          if(!raw) return { byUser: {} };
+          const parsed = JSON.parse(raw);
+          return parsed && typeof parsed==='object' ? parsed : { byUser: {} };
+        } catch { return { byUser: {} }; }
+      }
+      function writeFeatures(obj){
+        try { localStorage.setItem(KEY, JSON.stringify(obj)); } catch {}
+      }
+      function getAuth(){
+        try { return JSON.parse(localStorage.getItem('auth_v1')||'null'); } catch { return null; }
+      }
+      function loadFor(user){
+        const feats = readFeatures();
+        const defaults = { kpis:true, charts:true, tables:true };
+        const f = (feats.byUser && feats.byUser[user]) || defaults;
+        flagKpis.checked = !!f.kpis; flagCharts.checked = !!f.charts; flagTables.checked = !!f.tables;
+      }
+      function saveFor(user){
+        const feats = readFeatures();
+        feats.byUser = feats.byUser || {};
+        feats.byUser[user] = { kpis: !!flagKpis.checked, charts: !!flagCharts.checked, tables: !!flagTables.checked };
+        writeFeatures(feats);
+        // Eğer seçili kullanıcı aktif oturum ise, auth_v1.features’ı da güncelle
+        const auth = getAuth();
+        if(auth && auth.u === user){
+          try { localStorage.setItem('auth_v1', JSON.stringify({ u: auth.u, t: auth.t, features: feats.byUser[user] })); } catch {}
+        }
+      }
+
+      // İlk yükleme
+      loadFor(userSelect.value);
+      userSelect.addEventListener('change', () => loadFor(userSelect.value));
+      saveBtn.addEventListener('click', () => {
+        const user = userSelect.value;
+        saveFor(user);
+        status.textContent = 'Kaydedildi.';
+        status.style.color = 'var(--success)';
+        setTimeout(()=>{ status.textContent=''; status.style.color='var(--muted)'; }, 2000);
+      });
+      gotoDashboard.addEventListener('click', () => { window.location.href='deneme.html'; });
+    })();
+  </script>
+</body>
+</html>
