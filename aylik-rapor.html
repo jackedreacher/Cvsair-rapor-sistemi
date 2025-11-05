@@ -9,7 +9,7 @@
     (function(){
       try {
         const AUTH_KEY='auth_v1';
-        const ALLOWED=['Cvsadmin','yunus'];
+        const ALLOWED=['Cvsadmin','yunus','hakan','gokhan'];
         const auth = JSON.parse(localStorage.getItem(AUTH_KEY)||'null');
         const ok = auth && Array.isArray(ALLOWED) && ALLOWED.includes(auth.u) && typeof auth.t==='string' && auth.t.length>0;
         if(!ok){ window.location.href='login.html'; }
