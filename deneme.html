@@ -984,9 +984,12 @@
         if (existing) existing.remove();
         const overlay = document.createElement('div');
         overlay.id = 'customerOverlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:1000;';
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        const overlayCss = `position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;${isMobile ? 'align-items:flex-start;justify-content:center;padding:64px 12px 12px;' : 'align-items:center;justify-content:center;'}z-index:9999;box-sizing:border-box;`;
+        overlay.style.cssText = overlayCss;
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:#252836;color:#e5e7eb;border:1px solid #374151;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);width:640px;max-width:92vw;max-height:80vh;padding:18px;overflow:hidden;';
+        const modalCss = `background:#252836;color:#e5e7eb;border:1px solid #374151;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);${isMobile ? 'width:100%;max-width:calc(100vw - 24px);' : 'width:640px;max-width:92vw;'}max-height:${isMobile ? '75vh' : '80vh'};padding:${isMobile ? '16px' : '18px'};overflow:hidden;`;
+        modal.style.cssText = modalCss;
         modal.innerHTML = `
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <h3 style="margin:0;font-size:18px;color:#ffffff;">Toplam Cari (${customers.length})</h3>
@@ -1024,9 +1027,12 @@
         if (existing) existing.remove();
         const overlay = document.createElement('div');
         overlay.id = 'metricOverlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:1000;';
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        const overlayCss2 = `position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(2px);display:flex;${isMobile ? 'align-items:flex-start;justify-content:center;padding:64px 12px 12px;' : 'align-items:center;justify-content:center;'}z-index:9999;box-sizing:border-box;`;
+        overlay.style.cssText = overlayCss2;
         const modal = document.createElement('div');
-        modal.style.cssText = 'background:#252836;color:#e5e7eb;border:1px solid #374151;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);width:720px;max-width:94vw;max-height:80vh;padding:18px;overflow:hidden;';
+        const modalCss2 = `background:#252836;color:#e5e7eb;border:1px solid #374151;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);${isMobile ? 'width:100%;max-width:calc(100vw - 24px);' : 'width:720px;max-width:94vw;'}max-height:${isMobile ? '75vh' : '80vh'};padding:${isMobile ? '16px' : '18px'};overflow:hidden;`;
+        modal.style.cssText = modalCss2;
         const fmtVal = opts.formatValue || ((v)=>String(v));
         const totalBlock = opts.totalLabel ? `
           <div style="border:1px solid #374151;border-radius:8px;background:#1e1e2e;margin:8px 0;">
