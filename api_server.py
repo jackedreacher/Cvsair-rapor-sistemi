@@ -32,25 +32,34 @@ else:
     logger.warning("FRONTEND_ORIGIN not set; allowing all origins for /api/* in development")
 
 # Uzak API yapılandırması (ENV üzerinden; hardcoded secret yok)
-REMOTE_API_BASE = os.getenv('REMOTE_API_BASE', 'http://localhost:5047').strip()
-REMOTE_ORDERS_PATH = os.getenv('REMOTE_ORDERS_PATH', '/api/Genel/getSIPARISLERCVS').strip()
+# Artık varsayılan olarak yeni Listeler/listeSIPARISLERCVS endpoint'i kullanılacak
+REMOTE_API_BASE = os.getenv('REMOTE_API_BASE', 'http://85.153.155.153:5047').strip()
+REMOTE_ORDERS_PATH = os.getenv('REMOTE_ORDERS_PATH', '/api/Listeler/listeSIPARISLERCVS').strip()
 REMOTE_BEARER_TOKEN = os.getenv('REMOTE_BEARER_TOKEN', '').strip()
 
-def get_siparisler(bas_tar=None, bit_tar=None, base_url=None):
+def get_siparisler(page_index=0, page_size=500, base_url=None):
     """
-    Uzaktan API'den siparişleri getirir; isteğe bağlı tarih aralığı.
+    Uzaktan API'den siparişleri getirir; paginasyon parametreleri ile.
     Tanı amaçlı base_url geçici override'ını destekler (query: baseUrl).
     """
-    # Default date range if not provided - yearly data
-    if not bas_tar:
-        bas_tar = "2025-01-01"
-    if not bit_tar:
-        bit_tar = "2025-12-31"
+    try:
+        page_index = int(page_index or 0)
+    except Exception:
+        page_index = 0
+    try:
+        page_size = int(page_size or 500)
+    except Exception:
+        page_size = 500
+    # Basit güvenlik: aşırı büyük pageSize engelle
+    if page_size <= 0:
+        page_size = 50
+    if page_size > 1000:
+        page_size = 1000
 
     base = (base_url or REMOTE_API_BASE)
     url = f"{base}{REMOTE_ORDERS_PATH}"
     headers = {"Authorization": f"Bearer {REMOTE_BEARER_TOKEN}"} if REMOTE_BEARER_TOKEN else {}
-    params = {"basTar": bas_tar, "bitTar": bit_tar}
+    params = {"pageIndex": page_index, "pageSize": page_size}
     if not REMOTE_BEARER_TOKEN:
         logger.warning("REMOTE_BEARER_TOKEN not set; calling remote API without Authorization header")
 
@@ -159,7 +168,8 @@ def process_data(raw_data):
     # Unwrap common response containers
     data = raw_data
     if isinstance(raw_data, dict):
-        for key in ['data', 'Data', 'result', 'Result', 'results']:
+        # Yeni paginasyonlu endpoint için 'items' öncelikli
+        for key in ['items', 'data', 'Data', 'result', 'Result', 'results']:
             if key in raw_data and isinstance(raw_data[key], (list, tuple)):
                 data = raw_data[key]
                 break
@@ -269,7 +279,9 @@ def get_orders():
         if provided != API_TOKEN_ENV:
             return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     try:
-        # Get date parameters from query string
+        # Paginasyon ve opsiyonel tarih aralığı parametreleri
+        page_index = request.args.get('pageIndex', default=0, type=int)
+        page_size = request.args.get('pageSize', default=500, type=int)
         bas_tar = request.args.get('startDate')
         bit_tar = request.args.get('endDate')
         base_url_override = request.args.get('baseUrl')
@@ -278,10 +290,26 @@ def get_orders():
 
         try:
             # Try to fetch raw data from the API
-            raw_data = get_siparisler(bas_tar, bit_tar, selected_base)
+            raw_data = get_siparisler(page_index=page_index, page_size=page_size, base_url=selected_base)
 
             # Process and transform the data
             processed_data = process_data(raw_data)
+
+            # Opsiyonel: start/end tarihleri verilmişse sunucu tarafında filtre uygula
+            if bas_tar or bit_tar:
+                def within_range(rec):
+                    d = rec.get('date')
+                    if not d:
+                        return False
+                    try:
+                        if bas_tar and d < bas_tar:
+                            return False
+                        if bit_tar and d > bit_tar:
+                            return False
+                        return True
+                    except Exception:
+                        return True
+                processed_data = [r for r in processed_data if within_range(r)]
 
             logger.info(f"Successfully processed {len(processed_data)} orders from API")
 
@@ -292,6 +320,10 @@ def get_orders():
                 'date_range': {
                     'start': bas_tar,
                     'end': bit_tar
+                },
+                'page': {
+                    'index': page_index,
+                    'size': page_size
                 }
             })
 
@@ -312,6 +344,10 @@ def get_orders():
                     'date_range': {
                         'start': bas_tar,
                         'end': bit_tar
+                    },
+                    'page': {
+                        'index': page_index,
+                        'size': page_size
                     }
                 })
             except Exception as csv_error:
@@ -324,6 +360,10 @@ def get_orders():
                     'date_range': {
                         'start': bas_tar,
                         'end': bit_tar
+                    },
+                    'page': {
+                        'index': page_index,
+                        'size': page_size
                     }
                 })
 

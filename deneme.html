@@ -651,7 +651,7 @@
       
       try {
         // Try to fetch from API first (fast timeout + one retry)
-        const response = await retryFetch('/api/orders', {}, 1, 7000);
+      const response = await retryFetch('/api/orders?pageIndex=0&pageSize=500', {}, 1, 7000);
         
         if (!response.ok) {
           throw new Error(`API hatası: ${response.status}`);

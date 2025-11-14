@@ -40,6 +40,29 @@
     .note { color: #a6adc8; font-size: 12px; margin-top: 8px; }
     @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .chart { height: 280px; } }
   </style>
+  <script>
+    // Plotly güvenlik ağı: CDN düşerse alternatifleri dene ve stub ekle
+    (function ensurePlotly(){
+      if (typeof window !== 'undefined' && typeof window.Plotly === 'undefined') {
+        const sources = [
+          'https://cdn.plot.ly/plotly-2.26.0.min.js',
+          'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.26.0/plotly.min.js',
+          'https://unpkg.com/plotly.js-dist-min@2.26.0/plotly.min.js'
+        ];
+        let i = 0;
+        const tryNext = () => {
+          if (i >= sources.length) return;
+          const s = document.createElement('script');
+          s.src = sources[i++]; s.async = true;
+          s.onload = () => console.log('Plotly loaded:', s.src);
+          s.onerror = () => { console.warn('Plotly load failed:', s.src); tryNext(); };
+          document.head.appendChild(s);
+        };
+        tryNext();
+        setTimeout(() => { if (typeof window.Plotly === 'undefined') { window.Plotly = { newPlot: () => {} }; } }, 3000);
+      }
+    })();
+  </script>
 </head>
 <body>
   <div class="container">
@@ -51,18 +74,24 @@
 
     <div class="grid">
       <div class="card" id="dailyCard">
-        <h3>Günlük Karşılaştırma</h3>
-        <div class="metric"><span class="label">Son Gün (TL):</span><span class="value" id="dailyLatestTL">—</span></div>
-        <div class="metric"><span class="label">Önceki Gün (TL):</span><span class="value" id="dailyPrevTL">—</span></div>
-        <div class="metric"><span class="label">Değişim:</span><span class="value" id="dailyDeltaTL">—</span> <span class="delta" id="dailyDeltaTLPct">—</span></div>
-        <div class="note">Diğer dövizler aylık tabloda ayrı gösterilir.</div>
+        <h3>Günlük Karşılaştırma (USD/EUR)</h3>
+        <div class="metric"><span class="label">Son Gün (USD):</span><span class="value" id="dailyLatestUSD">—</span></div>
+        <div class="metric"><span class="label">Önceki Gün (USD):</span><span class="value" id="dailyPrevUSD">—</span></div>
+        <div class="metric"><span class="label">Değişim:</span><span class="value" id="dailyDeltaUSD">—</span> <span class="delta" id="dailyDeltaUSDPct">—</span></div>
+        <div class="metric"><span class="label">Son Gün (EUR):</span><span class="value" id="dailyLatestEUR">—</span></div>
+        <div class="metric"><span class="label">Önceki Gün (EUR):</span><span class="value" id="dailyPrevEUR">—</span></div>
+        <div class="metric"><span class="label">Değişim:</span><span class="value" id="dailyDeltaEUR">—</span> <span class="delta" id="dailyDeltaEURPct">—</span></div>
+        <div class="note">TL toplamları aylık tabloda ve grafikte gösterilir.</div>
       </div>
       <div class="card" id="monthlyCard">
-        <h3>Aylık Karşılaştırma</h3>
-        <div class="metric"><span class="label">Bu Ay (TL):</span><span class="value" id="monthNowTL">—</span></div>
-        <div class="metric"><span class="label">Geçen Ay (TL):</span><span class="value" id="monthPrevTL">—</span></div>
-        <div class="metric"><span class="label">Değişim:</span><span class="value" id="monthDeltaTL">—</span> <span class="delta" id="monthDeltaTLPct">—</span></div>
-        <div class="note">TL harici dövizler ayrı sütunlarda izlenir.</div>
+        <h3>Aylık Karşılaştırma (USD/EUR)</h3>
+        <div class="metric"><span class="label">Bu Ay (USD):</span><span class="value" id="monthNowUSD">—</span></div>
+        <div class="metric"><span class="label">Geçen Ay (USD):</span><span class="value" id="monthPrevUSD">—</span></div>
+        <div class="metric"><span class="label">Değişim:</span><span class="value" id="monthDeltaUSD">—</span> <span class="delta" id="monthDeltaUSDPct">—</span></div>
+        <div class="metric"><span class="label">Bu Ay (EUR):</span><span class="value" id="monthNowEUR">—</span></div>
+        <div class="metric"><span class="label">Geçen Ay (EUR):</span><span class="value" id="monthPrevEUR">—</span></div>
+        <div class="metric"><span class="label">Değişim:</span><span class="value" id="monthDeltaEUR">—</span> <span class="delta" id="monthDeltaEURPct">—</span></div>
+        <div class="note">TL MoM grafiği aşağıda ayrı izlenir.</div>
       </div>
     </div>
 
@@ -91,28 +120,6 @@
   </div>
 
   <script>
-    // Plotly yükleme güvenlik ağı (CDN düşerse alternatif veya stub)
-    (function ensurePlotly(){
-      if (typeof window !== 'undefined' && typeof window.Plotly === 'undefined') {
-        const sources = [
-          'https://cdn.plot.ly/plotly-2.26.0.min.js',
-          'https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.26.0/plotly.min.js',
-          'https://unpkg.com/plotly.js-dist-min@2.26.0/plotly.min.js'
-        ];
-        let i = 0;
-        const tryNext = () => {
-          if (i >= sources.length) return;
-          const s = document.createElement('script');
-          s.src = sources[i++]; s.async = true;
-          s.onload = () => console.log('Plotly loaded:', s.src);
-          s.onerror = () => { console.warn('Plotly load failed:', s.src); tryNext(); };
-          document.head.appendChild(s);
-        };
-        tryNext();
-        setTimeout(() => { if (typeof window.Plotly === 'undefined') { window.Plotly = { newPlot: () => {} }; } }, 3000);
-      }
-    })();
-
     // Header saat
     function startHeaderClock(){
       const el = document.getElementById('headerNow');
@@ -122,13 +129,13 @@
     }
 
     // Fetch ve cache yardımcıları
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 7000) {
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
       try { return await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' }); }
       finally { clearTimeout(id); }
     }
-    async function retryFetch(url, options = {}, retries = 1, timeoutMs = 7000) {
+    async function retryFetch(url, options = {}, retries = 2, timeoutMs = 15000) {
       let attempt = 0, lastErr;
       while (attempt <= retries) {
         try { return await fetchWithTimeout(url, options, timeoutMs); }
@@ -189,12 +196,134 @@
     // Yardımcılar
     const fmtMoney = (n) => (typeof n === 'number' ? n : 0).toLocaleString('tr-TR', { minimumFractionDigits: 0 });
     const pad2 = (n) => String(n).padStart(2, '0');
-    function parseDate(v){ const d = new Date(v); return isNaN(d) ? null : d; }
+    // Detaylı-rapor mantığıyla sağlam tarih parse (ISO, dd.mm.yyyy, Excel seri)
+    function parseDate(v){
+      if (!v) return null;
+      if (v instanceof Date) return v;
+      if (typeof v === 'number') {
+        if (v > 25569 && v < 100000000) { // Excel seri
+          return new Date((v - 25569) * 86400 * 1000);
+        }
+        const dnum = new Date(v);
+        return isNaN(dnum) ? null : dnum;
+      }
+      const s = String(v).trim();
+      // Safari uyumu: 'YYYY-MM-DDTHH:mm:ss' (timezone yok) yerel olarak parse et
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})$/);
+      if (m) {
+        const y = parseInt(m[1],10), mo = parseInt(m[2],10)-1, d = parseInt(m[3],10), hh = parseInt(m[4],10), mm = parseInt(m[5],10), ss = parseInt(m[6],10);
+        const dd = new Date(y, mo, d, hh, mm, ss);
+        return isNaN(dd) ? null : dd;
+      }
+      const iso = new Date(s);
+      if (!isNaN(iso.getTime())) return iso;
+      const parts = s.split('.');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m2 = parseInt(parts[1], 10) - 1;
+        const y2 = parseInt(parts[2], 10);
+        const dd2 = new Date(y2, m2, d);
+        return isNaN(dd2) ? null : dd2;
+      }
+      return null;
+    }
     function ymd(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
     function ym(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}`; }
     function addDays(d, days){ const nd = new Date(d); nd.setDate(nd.getDate()+days); return nd; }
 
-    // Ana akış
+    function num(v){
+      if (typeof v === 'number') return v;
+      const s = String(v).replace(/"/g, '').replace(/,/g, '').trim();
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+    function normalizeCurrency(raw){
+      let s = String(raw || 'TL').trim().toUpperCase();
+      if (s === 'TRY' || s.includes('TL')) return 'TL';
+      if (s === 'USD' || s.includes('DOLAR')) return 'USD';
+      if (s === 'EUR' || s.includes('EURO')) return 'EUR';
+      if (s === 'GBP' || s.includes('STERLIN')) return 'GBP';
+      return s;
+    }
+    function normalizeRow(row){
+      try {
+        const tarihRaw = row.tarih ?? row.date ?? row['SİPARİŞ TARİHİ'] ?? null;
+        const d = parseDate(tarihRaw);
+        if (!d) return null;
+        const doviz = normalizeCurrency(row.doviz ?? row['DOVİZ CİNSİ'] ?? 'TL');
+        const nettutarRaw = (
+          row.nettutar ??
+          row['SİPARİŞ NET TUTAR'] ??
+          row['NET TUTAR'] ??
+          row['KALAN SİPARİŞ NET TUTAR'] ??
+          row.kalannet ??
+          row['SİPARİŞ BRÜT TUTAR'] ??
+          row.tutar ??
+          row['TUTAR'] ?? 0
+        );
+        return { tarih: ymd(d), doviz, nettutar: num(nettutarRaw) };
+      } catch { return null; }
+    }
+
+    // CSV fallback
+    function parseCSV(csvText) {
+      const lines = csvText.trim().split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+      const data = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line || line.startsWith(',') || !line.includes(',')) continue;
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+        for (let j = 0; j < line.length; j++) {
+          const char = line[j];
+          if (char === '"') { inQuotes = !inQuotes; }
+          else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+          else { current += char; }
+        }
+        values.push(current.trim());
+        if (values.length < headers.length) continue;
+        const row = {};
+        headers.forEach((header, index) => {
+          let value = values[index] ? values[index].trim().replace(/"/g, '') : '';
+          if (header.includes('TUTAR') || header.includes('MİKTAR')) {
+            value = value.replace(/,/g, '').replace(/\s+/g, '');
+            row[header.trim()] = parseFloat(value) || 0;
+          } else { row[header.trim()] = value; }
+        });
+        if (row['SİPARİŞ TARİHİ']) {
+          const parts = String(row['SİPARİŞ TARİHİ']).split('.');
+          if (parts.length === 3) { row.date = `${parts[2]}-${pad2(parts[1])}-${pad2(parts[0])}`; }
+        }
+        data.push(row);
+      }
+      return data;
+    }
+    async function getCSVData(){
+      try {
+        const resp = await fetch('orders.csv', { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`CSV yüklenemedi: ${resp.status}`);
+        const text = await resp.text();
+        const rows = parseCSV(text);
+        console.log(`✅ CSV'den ${rows.length} kayıt yüklendi (fallback)`);
+        return rows;
+      } catch (err) {
+        console.error('CSV okuma hatası:', err);
+        return [];
+      }
+    }
+
+    function sampleData(){
+      return [
+        { tarih: '2025-08-30T00:00:00', nettutar: 10000, doviz: 'TL' },
+        { tarih: '2025-08-31T00:00:00', nettutar: 8200, doviz: 'EUR' },
+        { tarih: '2025-09-02T00:00:00', nettutar: 15000, doviz: 'TL' },
+        { tarih: '2025-09-03T00:00:00', nettutar: 18000, doviz: 'TL' },
+        { tarih: '2025-09-03T00:00:00', nettutar: 11665.2, doviz: 'USD' }
+      ];
+    }
+
     async function loadData(){
       const statusDiv = document.getElementById('dataStatus');
       statusDiv.textContent = '📥 Veriler yükleniyor...';
@@ -213,7 +342,7 @@
       }
       // 3) API
       try {
-        const res = await retryFetch('/api/orders', {}, 1, 8000);
+        const res = await retryFetch('/api/orders', {}, 2, 15000);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const api = await res.json();
         const rows = api.success ? api.data : Array.isArray(api) ? api : [];
@@ -222,48 +351,63 @@
         statusDiv.textContent = `✅ API: ${rows.length} kayıt güncellendi`;
         build(rows);
       } catch (e) {
-        console.warn('API hatası, örnek veri kullanılacak:', e);
-        if (!(cached && cached.length)) { build(sampleData()); statusDiv.textContent = '⚠️ Örnek veriler gösteriliyor'; }
+        console.warn('API hatası, CSV fallback denenecek:', e);
+        try {
+          const csvRows = await getCSVData();
+          if (Array.isArray(csvRows) && csvRows.length) {
+            statusDiv.textContent = `✅ CSV: ${csvRows.length} kayıt yüklendi`;
+            writeOrdersCache(csvRows);
+            await idbPutLatest(csvRows);
+            build(csvRows);
+          } else {
+            if (!(cached && cached.length)) { build(sampleData()); statusDiv.textContent = '⚠️ Örnek veriler gösteriliyor'; }
+          }
+        } catch (csvErr) {
+          console.error('CSV fallback sırasında hata:', csvErr);
+          if (!(cached && cached.length)) { build(sampleData()); statusDiv.textContent = '⚠️ Örnek veriler gösteriliyor'; }
+        }
       }
     }
 
-    function sampleData(){
-      return [
-        { tarih: '2025-08-29T00:00:00', nettutar: 11665.2, doviz: 'USD' },
-        { tarih: '2025-08-30T00:00:00', nettutar: 10000, doviz: 'TL' },
-        { tarih: '2025-08-31T00:00:00', nettutar: 8200, doviz: 'EUR' },
-        { tarih: '2025-09-02T00:00:00', nettutar: 15000, doviz: 'TL' },
-        { tarih: '2025-09-03T00:00:00', nettutar: 18000, doviz: 'TL' }
-      ];
-    }
-
     function build(rows){
-      // Gün ve ay bazlı toplamlar (döviz ayrı)
+      // Normalize
+      const normalized = Array.isArray(rows) ? rows.map(normalizeRow).filter(Boolean) : [];
+
+      // Gün ve ay bazlı toplamlar
       const dayTotals = new Map(); // key: YYYY-MM-DD -> {count, byCurrency}
       const monthTotals = new Map(); // key: YYYY-MM -> {count, byCurrency}
       let maxDate = null;
-      for (const r of rows) {
+      for (const r of normalized) {
         const d = parseDate(r.tarih); if (!d) continue; const dayKey = ymd(d), monthKey = ym(d);
-        const cur = (r.doviz || 'TL').toUpperCase(); const val = Number(r.nettutar) || 0;
-        if (!dayTotals.has(dayKey)) dayTotals.set(dayKey, { count:0, byCurrency:{TL:0, USD:0, EUR:0} });
+        const cur = (r.doviz || 'TL').toUpperCase(); const val = num(r.nettutar) || 0;
+        if (!dayTotals.has(dayKey)) dayTotals.set(dayKey, { count:0, byCurrency:{TL:0, USD:0, EUR:0, GBP:0} });
         const dt = dayTotals.get(dayKey); dt.count += 1; dt.byCurrency[cur] = (dt.byCurrency[cur] || 0) + val;
-        if (!monthTotals.has(monthKey)) monthTotals.set(monthKey, { count:0, byCurrency:{TL:0, USD:0, EUR:0} });
+        if (!monthTotals.has(monthKey)) monthTotals.set(monthKey, { count:0, byCurrency:{TL:0, USD:0, EUR:0, GBP:0} });
         const mt = monthTotals.get(monthKey); mt.count += 1; mt.byCurrency[cur] = (mt.byCurrency[cur] || 0) + val;
         if (!maxDate || d > maxDate) maxDate = d;
       }
       if (!maxDate) return;
 
-      // Günlük karşılaştırma (TL)
+      // Günlük karşılaştırma (USD/EUR)
       const latestKey = ymd(maxDate);
       const prevKey = ymd(addDays(maxDate, -1));
-      const latestTL = (dayTotals.get(latestKey)?.byCurrency?.TL) || 0;
-      const prevTL = (dayTotals.get(prevKey)?.byCurrency?.TL) || 0;
-      const dDelta = latestTL - prevTL;
-      const dPct = prevTL ? (dDelta / prevTL) * 100 : (latestTL ? 100 : 0);
-      document.getElementById('dailyLatestTL').textContent = '₺ ' + fmtMoney(latestTL);
-      document.getElementById('dailyPrevTL').textContent = '₺ ' + fmtMoney(prevTL);
-      document.getElementById('dailyDeltaTL').textContent = (dDelta >= 0 ? '+₺ ' : '₺ ') + fmtMoney(dDelta);
-      const dPctEl = document.getElementById('dailyDeltaTLPct'); dPctEl.textContent = `${(dPct).toFixed(1)}%`; dPctEl.className = 'delta ' + (dDelta >= 0 ? 'up' : 'down');
+      const latestUSD = (dayTotals.get(latestKey)?.byCurrency?.USD) || 0;
+      const prevUSD = (dayTotals.get(prevKey)?.byCurrency?.USD) || 0;
+      const dDeltaUSD = latestUSD - prevUSD;
+      const dPctUSD = prevUSD ? (dDeltaUSD / prevUSD) * 100 : (latestUSD ? 100 : 0);
+      document.getElementById('dailyLatestUSD').textContent = '$ ' + fmtMoney(latestUSD);
+      document.getElementById('dailyPrevUSD').textContent = '$ ' + fmtMoney(prevUSD);
+      document.getElementById('dailyDeltaUSD').textContent = (dDeltaUSD >= 0 ? '+$ ' : '$ ') + fmtMoney(dDeltaUSD);
+      const dPctUSDEl = document.getElementById('dailyDeltaUSDPct'); dPctUSDEl.textContent = `${(dPctUSD).toFixed(1)}%`; dPctUSDEl.className = 'delta ' + (dDeltaUSD >= 0 ? 'up' : 'down');
+
+      const latestEUR = (dayTotals.get(latestKey)?.byCurrency?.EUR) || 0;
+      const prevEUR = (dayTotals.get(prevKey)?.byCurrency?.EUR) || 0;
+      const dDeltaEUR = latestEUR - prevEUR;
+      const dPctEUR = prevEUR ? (dDeltaEUR / prevEUR) * 100 : (latestEUR ? 100 : 0);
+      document.getElementById('dailyLatestEUR').textContent = '€ ' + fmtMoney(latestEUR);
+      document.getElementById('dailyPrevEUR').textContent = '€ ' + fmtMoney(prevEUR);
+      document.getElementById('dailyDeltaEUR').textContent = (dDeltaEUR >= 0 ? '+€ ' : '€ ') + fmtMoney(dDeltaEUR);
+      const dPctEUREl = document.getElementById('dailyDeltaEURPct'); dPctEUREl.textContent = `${(dPctEUR).toFixed(1)}%`; dPctEUREl.className = 'delta ' + (dDeltaEUR >= 0 ? 'up' : 'down');
 
       // Günlük snapshotları IndexedDB 'days' store'a yaz
       (async ()=>{
@@ -282,23 +426,39 @@
         } catch (e) { console.warn('Günlük snapshot yazma hatası', e); }
       })();
 
-      // Aylık karşılaştırma (TL)
+      // Aylık karşılaştırma (USD/EUR)
       const nowMonthKey = ym(maxDate);
       const prevMonthDate = new Date(maxDate.getFullYear(), maxDate.getMonth()-1, 1);
       const prevMonthKey = ym(prevMonthDate);
-      const nowTL = (monthTotals.get(nowMonthKey)?.byCurrency?.TL) || 0;
-      const prevTLm = (monthTotals.get(prevMonthKey)?.byCurrency?.TL) || 0;
-      const mDelta = nowTL - prevTLm;
-      const mPct = prevTLm ? (mDelta / prevTLm) * 100 : (nowTL ? 100 : 0);
-      document.getElementById('monthNowTL').textContent = '₺ ' + fmtMoney(nowTL);
-      document.getElementById('monthPrevTL').textContent = '₺ ' + fmtMoney(prevTLm);
-      document.getElementById('monthDeltaTL').textContent = (mDelta >= 0 ? '+₺ ' : '₺ ') + fmtMoney(mDelta);
-      const mPctEl = document.getElementById('monthDeltaTLPct'); mPctEl.textContent = `${(mPct).toFixed(1)}%`; mPctEl.className = 'delta ' + (mDelta >= 0 ? 'up' : 'down');
+      const nowUSD = (monthTotals.get(nowMonthKey)?.byCurrency?.USD) || 0;
+      const prevUSDm = (monthTotals.get(prevMonthKey)?.byCurrency?.USD) || 0;
+      const mDeltaUSD = nowUSD - prevUSDm;
+      const mPctUSD = prevUSDm ? (mDeltaUSD / prevUSDm) * 100 : (nowUSD ? 100 : 0);
+      document.getElementById('monthNowUSD').textContent = '$ ' + fmtMoney(nowUSD);
+      document.getElementById('monthPrevUSD').textContent = '$ ' + fmtMoney(prevUSDm);
+      document.getElementById('monthDeltaUSD').textContent = (mDeltaUSD >= 0 ? '+$ ' : '$ ') + fmtMoney(mDeltaUSD);
+      const mPctUSDEl = document.getElementById('monthDeltaUSDPct'); mPctUSDEl.textContent = `${(mPctUSD).toFixed(1)}%`; mPctUSDEl.className = 'delta ' + (mDeltaUSD >= 0 ? 'up' : 'down');
 
-      // Aylık TL grafiği
+      const nowEUR = (monthTotals.get(nowMonthKey)?.byCurrency?.EUR) || 0;
+      const prevEURm = (monthTotals.get(prevMonthKey)?.byCurrency?.EUR) || 0;
+      const mDeltaEUR = nowEUR - prevEURm;
+      const mPctEUR = prevEURm ? (mDeltaEUR / prevEURm) * 100 : (nowEUR ? 100 : 0);
+      document.getElementById('monthNowEUR').textContent = '€ ' + fmtMoney(nowEUR);
+      document.getElementById('monthPrevEUR').textContent = '€ ' + fmtMoney(prevEURm);
+      document.getElementById('monthDeltaEUR').textContent = (mDeltaEUR >= 0 ? '+€ ' : '€ ') + fmtMoney(mDeltaEUR);
+      const mPctEUREl = document.getElementById('monthDeltaEURPct'); mPctEUREl.textContent = `${(mPctEUR).toFixed(1)}%`; mPctEUREl.className = 'delta ' + (mDeltaEUR >= 0 ? 'up' : 'down');
+
       renderMonthlyChart(monthTotals);
-      // Aylık tablo
       renderMonthlyTable(monthTotals);
+
+      // Durum satırına tanı amaçlı özet ekle (gizli debug)
+      try {
+        const statusDiv = document.getElementById('dataStatus');
+        const latestTotals = dayTotals.get(latestKey) || { byCurrency: {} };
+        const monthTotalsNow = monthTotals.get(nowMonthKey) || { byCurrency: {} };
+        const dbg = `Gün TL:${fmtMoney(latestTotals.byCurrency.TL||0)} USD:${fmtMoney(latestTotals.byCurrency.USD||0)} EUR:${fmtMoney(latestTotals.byCurrency.EUR||0)} | Ay TL:${fmtMoney(monthTotalsNow.byCurrency.TL||0)} USD:${fmtMoney(monthTotalsNow.byCurrency.USD||0)} EUR:${fmtMoney(monthTotalsNow.byCurrency.EUR||0)}`;
+        statusDiv.textContent = `${statusDiv.textContent} • ${dbg}`;
+      } catch {}
     }
 
     function renderMonthlyChart(monthTotals){

@@ -618,7 +618,14 @@
         if (v > 25569) return new Date((v - 25569) * 86400 * 1000);
         return new Date(v);
       }
-      const s = String(v);
+      const s = String(v).trim();
+      // Safari uyumu: 'YYYY-MM-DDTHH:mm:ss' timezone belirtilmemiş formatı yerel parse et
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})$/);
+      if (m) {
+        const y = parseInt(m[1],10), mo = parseInt(m[2],10)-1, d = parseInt(m[3],10), hh = parseInt(m[4],10), mm = parseInt(m[5],10), ss = parseInt(m[6],10);
+        const dd = new Date(y, mo, d, hh, mm, ss);
+        return isNaN(dd) ? null : dd;
+      }
       const iso = new Date(s);
       if (!isNaN(iso.getTime())) return iso;
       const parts = s.split('.');
@@ -630,11 +637,18 @@
       }
       return null;
     }
+    // Tarihi yerel 'YYYY-MM-DD' olarak biçimlendir (timezone kaynaklı gün kaymasını önler)
+    function ymdLocal(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
     function normalize(row) {
       const tarihRaw = row.tarih ?? row['SİPARİŞ TARİHİ'] ?? row.date;
       const miktarRaw = row.miktar ?? row['MİKTAR'];
       const kalanRaw = row.kalanmik ?? row['KALAN MİKTAR'];
-      const nettutarRaw = row.nettutar ?? row['SİPARİŞ NET TUTAR'] ?? row['KALAN SİPARİŞ NET TUTAR'];
+      const nettutarRaw = row.nettutar ?? row['NET TUTAR'] ?? row['SİPARİŞ NET TUTAR'] ?? row.tutar ?? row['TUTAR'];
       const tutarRaw = row.tutar ?? row['SİPARİŞ BRÜT TUTAR'] ?? nettutarRaw;
       const teslimCalc = (num(miktarRaw) - num(kalanRaw));
       const projRaw = row.proje ?? row['PROJE'] ?? row['Sorumluluk Merkezi Adı'] ?? row['Proje'];
@@ -642,11 +656,11 @@
       const srmadRaw = row['Sorumluluk Merkezi Adı'] ?? row.srmad ?? '';
       const dovizRaw = row.doviz ?? row['DOVİZ CİNSİ'] ?? 'TL';
       const cariRaw = row.cari ?? row['CARİ İSMİ'] ?? row['Cari'] ?? '';
-      const kalannetRaw = row.kalannet ?? row['KALAN SİPARİŞ NET TUTAR'] ?? nettutarRaw;
+      const kalannetRaw = row.kalannet ?? row['KALAN SİPARİŞ NET TUTAR'] ?? 0;
       const durumRaw = row.durum ?? (num(kalanRaw) > 0 ? 'Açık' : 'Kapalı');
       const d = parseDate(tarihRaw) || new Date();
       return {
-        tarih: d.toISOString(),
+        tarih: ymdLocal(d),
         date: d,
         cari: String(cariRaw || '').trim(),
         srmkod: String(srmkodRaw || '').trim(),
@@ -690,7 +704,7 @@
       }
       try {
         // Try to fetch from API first (fast timeout + one retry)
-        const response = await retryFetch('/api/orders', {}, 1, 7000);
+      const response = await retryFetch('/api/orders?pageIndex=0&pageSize=500', {}, 1, 7000);
         
         if (!response.ok) {
           throw new Error(`API hatası: ${response.status}`);
@@ -716,22 +730,44 @@
         
       } catch (error) {
         console.error('API yükleme hatası:', error);
-        if (cached && cached.length) {
-          console.warn('API hatası nedeniyle önbellek kullanılıyor');
-          return; // UI is already rendered from cache above
+        // API başarısızsa CSV'ye mutlaka düş: cache olsa bile güncel dosyayı oku
+        // Yukarıda cache ile UI'yı hızlıca render ettik; burada CSV daha güncelse UI'yı güncelliyoruz
+        try {
+          const fallback = await getSampleData();
+          if (Array.isArray(fallback) && fallback.length) {
+            allData = fallback.map(normalize);
+            filteredData = [...allData];
+            updateStats();
+            renderTable();
+            renderPagination();
+            // Güncel fallback'ı cache'e yaz
+            writeOrdersCache(allData);
+            console.warn('API hatası: CSV fallback uygulandı ve tablo güncellendi');
+          } else {
+            // CSV boşsa veya okunamadıysa ve cache varsa, mevcut görünümü koru
+            if (cached && cached.length) {
+              console.warn('CSV fallback boş; önbellek verileri gösterilmeye devam ediyor');
+            } else {
+              // Ne API ne CSV: boş görünüm
+              allData = [];
+              filteredData = [];
+              updateStats();
+              renderTable();
+              renderPagination();
+              console.warn('API ve CSV erişilemedi: veri bulunamadı');
+            }
+          }
+        } catch (csvErr) {
+          console.error('CSV fallback sırasında hata:', csvErr);
+          // CSV okuma hatasında, cache varsa onu bırak; yoksa boş görünüm
+          if (!cached || !cached.length) {
+            allData = [];
+            filteredData = [];
+            updateStats();
+            renderTable();
+            renderPagination();
+          }
         }
-        
-        // Fallback to CSV data if API fails and normalize to new schema
-        const fallback = await getSampleData();
-        allData = (fallback || []).map(normalize);
-        filteredData = [...allData];
-        updateStats();
-        renderTable();
-        renderPagination();
-        // Persist fallback to cache to improve next load
-        writeOrdersCache(allData);
-        
-        console.warn('API hatası nedeniyle CSV/örnek verileri kullanılıyor');
       }
     }
 
@@ -1237,15 +1273,15 @@
         return `
           <tr>
             <td data-column="proje">${row.proje || '-'}</td>
-            <td data-column="tarih">${(row.tarih || '').slice(0,10)}</td>
+            <td data-column="tarih">${row.tarih || ''}</td>
             <td data-column="cari">${row.cari || '-'}</td>
             <td data-column="miktar">${(row.miktar || 0).toLocaleString('tr-TR')}</td>
             <td data-column="teslim">${(row.teslim || 0).toLocaleString('tr-TR')}</td>
-            <td data-column="tutar" class="${currencyClass}">${(row.tutar || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency}</td>
-            <td data-column="nettutar" class="${currencyClass}">${(row.nettutar || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency}</td>
+            <td data-column="tutar" class="${currencyClass}">${(row.tutar || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
+            <td data-column="nettutar" class="${currencyClass}">${(row.nettutar || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
             <td data-column="doviz"><span class="${currencyClass}">${currency}</span></td>
             <td data-column="kalanmik">${(row.kalanmik || 0).toLocaleString('tr-TR')}</td>
-            <td data-column="kalannet" class="${currencyClass}">${(row.kalannet || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})} ${currency}</td>
+            <td data-column="kalannet" class="${currencyClass}">${(row.kalannet || 0).toLocaleString('tr-TR', {minimumFractionDigits: 2})}</td>
             <td data-column="durum">${row.durum || '-'}</td>
           </tr>
         `;
@@ -1295,7 +1331,7 @@
       
       filteredData.forEach(row => {
         const csvRow = [
-          (row.tarih || '').slice(0,10),
+          (row.tarih || ''),
           `"${row.cari || ''}"`,
           `"${row.srmkod || ''}"`,
           `"${row.srmad || ''}"`,
